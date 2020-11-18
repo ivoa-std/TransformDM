@@ -1,0 +1,321 @@
+\documentclass[11pt,a4paper]{ivoa}
+\usepackage[margin=4.25cm]{geometry} 
+\input tthdefs
+\setcounter{tocdepth}{2}
+
+\title{WCS Transform Model}
+
+% see ivoatexDoc for what group names to use here
+\ivoagroup{Data Model Working Group}
+
+\author{Arnold Rots}
+\author{Mark Cresitello-Dittmar}
+\author{David Berry}
+\author{Steven Crawford}
+\author{Nadia Dencheva}
+\author{Tim Jenness}
+\author{Omar Laurino}
+\author{Stuart Mumford}
+\author{Erik Tollerud}
+
+%\author[????URL????]{????Alfred Usher Thor????}
+%\author{????Fred Offline????}
+
+\editor{Mark Cresitello-Dittmar}
+\editor{Arnold Rots}
+
+% \previousversion[????URL????]{????Funny Label????}
+\previousversion{This is the first public release}
+       
+\begin{document}
+
+\begin{abstract}
+  In creating version 2 of ``\emph{Space-Time Coordinate Metadata for the Virtual Observatory}'' (STC) \citep{std:STC} Data Model, it was decided to split the content into various component models which focus on particular aspects of the previous model scope.  
+  
+  This model covers the WCS Transform component, and includes the following concepts:
+  \begin{itemize}
+  \item The description of mathematical operations which form the building blocks for conversions from one coordinate space to another.
+  \item The combination of individual operations into an arbitrarily complex Transform.
+  \end{itemize}
+\end{abstract}
+
+\section*{Acknowledgments}
+TBD: Get appropriate acknowledgment text
+
+\section*{Conformance-related definitions}
+
+The words ``MUST'', ``SHALL'', ``SHOULD'', ``MAY'', ``RECOMMENDED'', and
+``OPTIONAL'' (in upper or lower case) used in this document are to be
+interpreted as described in IETF standard RFC2119 \citep{std:RFC2119}.
+
+The \emph{Virtual Observatory (VO)} is a
+general term for a collection of federated resources that can be used
+to conduct astronomical research, education, and outreach.
+The \href{http://www.ivoa.net}{International
+Virtual Observatory Alliance (IVOA)} is a global
+collaboration of separately funded projects to develop standards and
+infrastructure that enable VO applications.
+
+\newgeometry{left=1.0in,right=1.0in,bottom=1.0in}
+\section{Introduction}
+
+\subsection{Motivation}
+In Astronomy, it is common practice to define the relation between two coordinate spaces via a series of mathematical operations.  
+With this relation, one can transform coordinates and other objects from one space to the other by applying these operations on
+the set of points from the originating space.  This model describes these operations and the mechanisms for combining them.
+
+\subsection{Context and Scope}
+This document is a result of updating the ``\emph{Space-Time Coordinate Metadata for the Virtual Observatory}'' (STC) \citep{std:STC} model for use in VO-DML compliant models.
+
+The update and revision of the STC model has sub-divided the content into component 
+models, each covering a portion of the scope of the original model.  This has 
+allowed for a better description of the relations between the various components, 
+allows for independent development of the component models, and creates smaller, 
+more digestible content for users.
+
+This document covers the WCS Transforms model, including:
+\begin{itemize}
+  \item The description of mathematical operations which form the building blocks for conversions from one coordinate space to another.
+  \item The combination of individual operations into an arbitrarily complex Transform.
+\end{itemize}
+
+The scope of this version of the model covers a core set of transform operations commonly used by the community.
+It is designed to be compatible with FITS WCS metadata transport, and existing implementations
+such as AST \citep{soft:AST}, GWCS \citep{soft:GWCS}, and wcslib \citep{soft:WCSLIB}.
+It forms a foundation which can be built upon in future versions.
+
+It is worth mentioning that this version of the model does NOT cover:
+\begin{itemize}
+  \item Spatial frame transformations (e.g. equatorial - galactic )
+  \item Equivalent property transforms (e.g. Energy - Wavelength - Frequency )
+  \item Time representations transforms (e.g. Date - MJD )
+  \item Time transforms described in FITS WCS Paper IV.
+\end{itemize}
+
+
+\section{Use Cases and Requirements}
+\label{sect:ucreq}
+
+\subsection{Use Cases}
+\label{sect:usecases}
+
+\subsubsection{Cube model support}
+\label{uc:Cube-model-support}
+
+\begin{itemize}
+\item Image axes \\
+  Pixelated image axes are defined in a binned coordinate space with integerized values (pixel indexes).  However, 
+  to be scientifically useful, we must map these pixel coordinates to one or more coordinate spaces with physical 
+  meaning.  For example, we may transform them to various detector coordinates, or to an energy scale.  Ultimately, in 
+  the spatial domain, we want the image axes represented in some celestial world coordinate system.  We note the following
+  characteristics of mappings commonly found in astronomical image data:
+
+  \begin{itemize}
+    \item any combination of pixel axes may be involved in the transform to any given 'physical' space
+    \item any pixel axis may be involved in more than one mapping
+    \item mappings often involve multiple steps executed in sequence
+    \item mappings may define a progressive migration in coordinate space (e.g. pixel - ccd - detector - sky - wcs )
+    \item this progression may be given with explicitly defined intermediate coordinate spaces, or 
+          as a single multi-stage transform.  It is, therefore, necessary that the Transform model facilitate the stacking of 
+          operations in series.
+    \item transform operations should be flexible in covering the n-dimensional space. e.g. the application of Scale operations to 1D, 2D, nD axes.
+    \item pixel axis mappings are typically to a continuous domain, but may also be to a discrete domain such as Polarization state. 
+  \end{itemize}
+
+  Astronomical image cubes may have any number of dimensions, but are typically separable into co-dependent axes of 
+  1,2, or 3 dimensions.  For example, a 4D image cube may contain a 1D spectral axis, 2D spatial axes, and 1D polarization axis.
+  \begin{itemize}
+    \item axes involved in a mapping need not be associated with the same physical domain.  e.g. X,Y = Map(x,y,temp); Transform with both spatial and thermal dependence.
+    \item dimensionality may change between operations.
+    \item this model must facilitate the combination of operations to cover an n-dimensional space from building blocks of commonly used operations. 
+  \end{itemize}
+      
+  The industry standard for projections are defined in:
+  \begin{itemize}
+    \item Representations of celestial coordinates in FITS (paper II)\citep{WCSpaperII}
+    \item Representations of spectral coordinates in FITS (paper III)\citep{WCSpaperIII}
+  \end{itemize}
+  This document, in no way, duplicates that work, but rather, defines model elements compatible with these specifications.  In that way,
+  any implementation of these standards is automatically compatible with this model.  However, these standards do not cover the full
+  range of non-linear distortions seen from today's instruments.  It is, therefore, necessary that this model be extensible to represent
+  additional distortion types as needed.
+
+\item Virtual data \\
+  In addition to image axes, astronomical data is often defined as a mathematical function of other data.  In this case, the originating
+  coordinate system is not pixelated, but any arbitrary coordinate space.  Examples of this include sparse cubes where the world coordinates
+  are defined in terms of the physical detector coordinates, and image data values which may also have transforms associated with them.
+
+\end{itemize}
+
+\subsubsection{Transform workflow}
+\label{uc:Transform-workflow}
+
+  An implementation project focused on the Transform model being conducted by members of various facilities to evaluate the usability and applicability of the model to their missions.  The focus of this project is to exercise the Transform model through a workflow consisting of:
+  \begin{itemize}
+    \item serialization in YAML of various Transform operation sequences
+    \item the generation and passing thereof between two Transform library implementations: AST and GWCS
+  \end{itemize}
+  This use case emphasizes the workflow and combination of atomic operations.
+  \begin{itemize}
+    \item combining operations in parallel to cover the dimension space
+    \item combining operations in series to accomplish multi-stage mappings
+    \item management and direction of axes through the operation sequence
+    \begin{itemize}
+      \item duplicate axes $x,y$ to send the pair into 2D-Polynomial transforms, producing $x',y'$
+      \item from 4D axis set, send axes 1 and 3 into operation A, axis 2 into operation B, axis 4 into operation C.
+      \item send 2D axis set into 3D operation, adding axis 3 with default value
+    \end{itemize}
+    \item handling of both forward and inverse operations
+    \begin{itemize}
+      \item for operations with no natural inverse, must have option to assign an independent operation to use in that direction.
+    \end{itemize}
+  \end{itemize}
+
+
+\subsection{Requirements}
+\label{sect:reqs}
+
+ Examination and implementation of the above cases leads to a set of requirements distributed through the various STC component models.  Here we 
+itemize those relevant to the transform model specifically.
+
+\subsubsection{General}
+Requirements pertaining to the overall criteria that the model must satisfy.
+  \begin{itemize}
+    \item [\textbf{[vodml.001]:}] The model shall be vo-dml compliant
+    \item [\textbf{[vodml.002]:}] shall re-use, or refer to, dependent models for objects and concepts already defined in other models
+    \item [\textbf{[vodml.003]:}] shall produce a validated vo-dml XML description
+    \item [\textbf{[vodml.004]:}] shall produce documentation in vo-dml HTML format
+    \item [\textbf{[vodml.005]:}] shall produce documentation in standard PDF format
+  \end{itemize}
+
+\subsubsection{Application/Usage}
+Requirements pertaining to the user experience.  Note, as a data model, users will not typically interact directly with the model,
+  \begin{itemize}
+    \item [\textbf{[user.001]:}] Users should be able to identify and use basic content with minimal specialized information. 
+      In other words, a generic utility should be able to find and use core elements without knowing a lot about the various extensions and uses of those elements.
+    \item [\textbf{[user.002]:}] When applicable, the model should support usability by simplifying common scenarios. i.e. common things simple, complex things possible
+    \item [\textbf{[user.003]:}] The model shall be easily extended to accommodate cases and applications not yet considered.
+  \end{itemize}
+
+\subsubsection{Content}
+Requirements pertaining to the elements to be defined by the model.
+\begin{itemize}
+
+  \item [\textbf{[trans.001]:}] Shall facilitate the relation of two coordinate spaces through a mathematical formula (Transforms)
+  \item [\textbf{[trans.002]:}] Shall define a set of atomic Transform operations commonly used in astronomical applications
+  \begin{itemize}
+    \item [\textbf{[trans.002.1]:}] at a minimum, shall accomodate common operations found in FITS images and data cubes, including but not limited to:
+                 Linear, Matrix, FITS WCS projection, Lookup table, Polynomial (1D and 2D) 
+    \item [\textbf{[trans.002.2]:}] shall accommodate and be compatible with established implementation packages AST, and GWCS 
+  \end{itemize}
+  \item [\textbf{[trans.003]:}] Shall allow the combination of operations in sequence, to form complex, multi-stage transforms.
+  \item [\textbf{[trans.004]:}] Shall allow the combination of operations in parallel to cover the appropriate domain space
+  \item [\textbf{[trans.005]:}] Shall support bi-directional workflow (forward and inverse), including the explicit assignment of independent operations for types which have no natural inverse.
+  \item [\textbf{[trans.006]:}] Shall provide operations to facilitate a work flow that requires manipulation of the dimensional axes through the process
+  \begin{itemize}
+    \item [\textbf{[trans.006.1]:}] duplicate axes, e.g. to send axis pair (x,y) into 2 Poly2D operations to form (x',y')
+    \item [\textbf{[trans.006.2]:}] shuffle axis order [x,y,z] => [x,z,y]
+    \item [\textbf{[trans.006.3]:}] add or drop dimensions 
+    \item [\textbf{[trans.006.4]:}] allows explicit control of flow in both forward and inverse directions
+    \item [\textbf{[trans.006.4.1]:}] preferential selection of source in reverse direction for duplicated input axes
+    \item [\textbf{[trans.006.4.2]:}] one-to-one axis mappings are not, necessarily, bi-directional
+  \end{itemize}
+\end{itemize}
+
+
+\pagebreak
+\subsection{Role within the VO Architecture}
+
+\begin{figure}[h]
+\centering
+
+% As of ivoatex 1.2, the architecture diagram is generated by ivoatex in
+% SVG; copy ivoatex/archdiag-full.xml to archdiag.xml and throw out
+% all lines not relevant to your standard.
+% Notes don't generally need this.  If you don't copy archdiag.xml,
+% you must remove archdiag.svg from FIGURES in the Makefile.
+
+\includegraphics[width=0.9\textwidth]{role_diagram.pdf}
+\caption{Architecture diagram for this document}
+\label{fig:archdiag}
+\end{figure}
+
+Fig.~\ref{fig:archdiag} shows the role this document plays within the
+IVOA architecture \citep{note:VOARCH}.
+
+\subsection{Model Dependencies }
+  
+  % INSERT FIGURE HERE
+  \begin{figure}[h]
+  \begin{center}
+    \includegraphics[width=3.0in]{diagrams/model_dependency.png}
+    \caption{WCS Transform model dependencies}\label{fig:overview}
+  \end{center}
+  \end{figure}
+
+This model depends loosly on the IVOA Coordinates model in that it references coordinate systems defined in that model.
+
+% Main Body of the document, extracted from vo-dml/xml using vo-dml2ivoatex
+% with some post-processing.. mainly in the sequencing of content for better readability.
+\input{body}
+
+\appendix
+\section{Changes from Previous Versions}
+
+2018-Dec-18
+\begin{itemize}
+\item Unit operation to 1-D
+\item Lookup: added text about handling enumeration data
+\item SkyProjection: included text about providing LONPOLE/LATPOLE inputs
+\item Changed Reorder to broader scoped operation Permute
+\item Correct Polynomial2D equation
+\item Miscellaneous text and description edits
+\end{itemize}
+% these would be subsections "Changes from v. WD-..."
+% Use itemize environments.
+2019-Mar-26
+\begin{itemize}
+\item enhanced use case and requirements descriptions
+\item renamed several elements to better reflect their function
+\item Lookup: add bounds error, interpolation method attributes and InterpolationMethod
+\item LookupEntry: added ability to define record for use outside table bounds
+\item LookupEntry: added 2D numerical entry type
+\item Permute: added attributes for number of source axes (for bi-directional flow management)
+\item Permute: added AddAxis type to facilitate adding a dimension
+\item FITS WCS: separated SkyProjection from Spherical Rotation components of paper II
+\item EulerRotation: added operation
+\item various typo-s, structural changes to document
+\end{itemize}
+2019-Apr-12
+\begin{itemize}
+\item SphericalRotation to SkyProjRotate, extending SkyProjection with part II of the spec.
+\item enhanced description of invert attribute
+\item corrected typo-s in Permute text
+\item absorbed AddAxis into PermuteAxis (seedValue optional)
+\item enhanced model description re: forward/inverse handling
+\item additional requirements on Permute for forward/inverse
+\item added explicit specification of forward and inverse operations.
+\end{itemize}
+2019-Sep-16
+\begin{itemize}
+\item renamed TCompoundMap to TCompound which is more consistent with the other type names.
+\item moved Forward and Inverse operations from TMapping to TAtomic
+\end{itemize}
+2020-Apr-01:
+\begin{itemize}
+\item Added TransformSet element, providing link to Coordinate Systems associated with Transform.
+\item Replaced explicit forward and inverse operation on Mapping with BiDirectionalMap which references forward and inverse Mapping instances.  So now, any Mapping MAY be bi-directional, but can always construct a BiDirectional Mapping.  Removes TOperational layer.
+\item Modified TCompoundMap representation, the composition of parent object is supposed to be invalid.  Now represented as a List of Mapping references.
+\end{itemize}
+
+
+% Appendix for UML diagram conventions
+\input{modeling_conventions}
+
+% Appendix for IVOA Base types
+\input{ivoa_types}
+
+\pagebreak
+\bibliography{ivoatex/ivoabib,ivoatex/docrepo,other}
+
+\end{document}

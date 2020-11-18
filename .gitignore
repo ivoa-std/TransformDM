@@ -1,0 +1,17 @@
+#
+# Project specific excludes
+#
+#
+# Binaries
+
+# vo-dml products
+*.cmap
+*.svrlt
+*.gvd
+*.validation-report.txt
+
+# OS
+.DS_Store
+
+# Misc
+*.swp
