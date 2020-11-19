@@ -1,3 +1,6 @@
+# This file generated from a template file maintained in the ivoatex repository.
+# See <link> for instructions on how to create and install it into a project repository.
+
 name: Update PDF Preview
 
 env:
