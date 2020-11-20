@@ -1,6 +1,10 @@
-# doc-template
-document template
+# At a glance
+TODO
 
+# PDF preview
+The PDF preview can be seen [here](https://github.com/ivoa-std/TransformDM/releases/download/auto-pdf-preview/MANGO-draft.pdf)
+
+# License
 <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/">
   <img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-sa/4.0/88x31.png" /></a>
   <br />
