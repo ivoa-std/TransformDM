@@ -6,8 +6,13 @@
 #
 name: Check the IVOA document
 
+defaults:
+  run:
+    shell: bash
+    working-directory: doc
+
 env:
-  doc_name:
+  doc_name: Transforms
 
 on:
   pull_request:
