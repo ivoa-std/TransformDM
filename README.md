@@ -2,7 +2,7 @@
 TODO
 
 # PDF preview
-The PDF preview can be seen [here](https://github.com/ivoa-std/TransformDM/releases/download/auto-pdf-preview/MANGO-draft.pdf)
+The PDF preview can be seen [here](https://github.com/ivoa-std/TransformDM/releases/download/auto-pdf-preview/Transforms-draft.pdf)
 
 # License
 <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/">
