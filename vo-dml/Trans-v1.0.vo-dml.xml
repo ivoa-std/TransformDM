@@ -19,8 +19,8 @@ Since a mapping expression can involve multiple steps between end points, we sep
   <lastModified>2020-08-03T17:47:50</lastModified>
   <import>
     <name>ivoa</name>
-    <url>http://www.ivoa.net/xml/VODML/20180519/IVOA-v1.0.vo-dml.xml</url>
-    <documentationURL>http://volute.g-vo.org/svn/trunk/projects/dm/vo-dml/models/ivoa/vo-dml/IVOA-v1.0.html</documentationURL>
+    <url>https://www.ivoa.net/xml/VODML/20180519/IVOA-v1.0.vo-dml.xml</url>
+    <documentationURL>https://volute.g-vo.org/svn/trunk/projects/dm/vo-dml/models/ivoa/vo-dml/IVOA-v1.0.html</documentationURL>
   </import>
   <import>
     <name>coords</name>
