@@ -1,8 +1,10 @@
-[![PDF-Preview](https://img.shields.io/badge/PDF-Preview-yellow)](https://github.com/ivoa-std/TransformDM/releases/download/auto-pdf-preview/Transforms-draft.pdf)
+[![PDF-Preview](https://img.shields.io/badge/PDF-Preview-blue)](https://github.com/ivoa-std/TransformDM/releases/download/auto-pdf-preview/Transforms-draft.pdf)
 
 # What is it?
 IVOA Data Model for WCS Transforms, covering the following concepts:
+
   • The description of mathematical operations which form the building blocks for conversions from one coordinate space to another.
+  
   • The combination of individual operations into an arbitrarily complex Transform.
   
 This model makes use of the [Astronomical Coordinates and Coordinate Systems](https://www.ivoa.net/documents/Coords/20200310/index.html) model for the description of the end point coordinate systems.
