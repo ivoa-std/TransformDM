@@ -1,0 +1,1300 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<vo-dml:model xmlns:vo-dml="http://www.ivoa.net/xml/VODML/v1"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://www.ivoa.net/xml/VODML/v1 http://www.ivoa.net/xml/VODML/vo-dml-v1.xsd">
+  <name>trans</name>
+  <description>The transform model defines objects which can be used to construct expressions representing the relation between two coordinate systems.  These may be used to transform coordinates and other objects defined in one coordinate system into corresponding objects in another coordinate system.  There are two primary components to the model, the "Mapping", and the "TransformSet".
+
+The "Mapping" object defines how to transform a set of "input" scalar values into a corresponding set of "output" scalar values.   The Mapping supports transforms in either direction via "operations" which we refer to as the forward and inverse operations.  The forward operation transforms the mapping inputs into mapping outputs.  The inverse operation transforms the mapping outputs into mapping inputs.  
+
+The "TransformSet" object gives physical context to the "Mapping" by relating a parent coordinate system to a target coordinate system via a Mapping.  The TransformSet model structure allows for the association of groups of inter-related coordinate systems.
+
+Since a mapping expression can involve multiple steps between end points, we separate these features, such that the Mapping provides the path, and the TransformSet associates a Mapping with its source and target coordinate systems.
+</description>
+  <uri/>
+  <title>WCS Transform Model</title>
+  <author>Arnold Rots, Mark Cresitello-Dittmar, David Berry, Steven Crawford, Nadia Dencheva, Tim Jenness, Omar Laurino, Stuart Mumford, Erik Tollerud</author>
+  <version>1.0</version>
+  <previousVersion>0.0</previousVersion>
+  <lastModified>2020-08-03T17:47:50</lastModified>
+  <import>
+    <name>ivoa</name>
+    <url>https://www.ivoa.net/xml/VODML/20180519/IVOA-v1.0.vo-dml.xml</url>
+    <documentationURL>https://volute.g-vo.org/svn/trunk/projects/dm/vo-dml/models/ivoa/vo-dml/IVOA-v1.0.html</documentationURL>
+  </import>
+  <import>
+    <name>coords</name>
+    <url>https://volute.g-vo.org/svn/trunk/projects/dm/STC/Coords/vo-dml/STC_coords-v1.0.vo-dml.xml</url>
+    <documentationURL>https://volute.g-vo.org/svn/trunk/projects/dm/STC/Coords/vo-dml/STC_coords-v1.0.html</documentationURL>
+  </import>
+  <enumeration>
+    <vodml-id>InterpolationMethod</vodml-id>
+    <name>InterpolationMethod</name>
+    <description>Enumeration of interpolation methods to control the interpretation of data between known points in operations such as Lookup.</description>
+    <literal>
+      <vodml-id>InterpolationMethod.None</vodml-id>
+      <name>None</name>
+      <description>No interpolation method specified, interpretation between points is undefined.</description>
+    </literal>
+    <literal>
+      <vodml-id>InterpolationMethod.Nearest</vodml-id>
+      <name>Nearest</name>
+      <description>Nearest neighbor is selected</description>
+    </literal>
+    <literal>
+      <vodml-id>InterpolationMethod.Linear</vodml-id>
+      <name>Linear</name>
+      <description>Assume a linear progression between points.</description>
+    </literal>
+    <literal>
+      <vodml-id>InterpolationMethod.Spline</vodml-id>
+      <name>Spline</name>
+      <description>Perform a spline interpolation through the points.  2-dimensional only.</description>
+    </literal>
+  </enumeration>
+
+  <enumeration>
+    <vodml-id>SkyProjectionType</vodml-id>
+    <name>SkyProjectionType</name>
+    <description>Enumeration of non-linear celestial projection algorithm codes as listed in Table 13 of the FITS WCS paper II.</description>
+    <literal>
+      <vodml-id>SkyProjectionType.AZP</vodml-id>
+      <name>AZP</name>
+      <description>Zenithal perspective</description>
+    </literal>
+    <literal>
+      <vodml-id>SkyProjectionType.SZP</vodml-id>
+      <name>SZP</name>
+      <description>Slant zenithal perspective</description>
+    </literal>
+    <literal>
+      <vodml-id>SkyProjectionType.TAN</vodml-id>
+      <name>TAN</name>
+      <description>Gnomonic (Tangent plane projection)</description>
+    </literal>
+    <literal>
+      <vodml-id>SkyProjectionType.STG</vodml-id>
+      <name>STG</name>
+      <description>Stereographic</description>
+    </literal>
+    <literal>
+      <vodml-id>SkyProjectionType.SIN</vodml-id>
+      <name>SIN</name>
+      <description>Slant orthographic (Sine projection)</description>
+    </literal>
+    <literal>
+      <vodml-id>SkyProjectionType.ARC</vodml-id>
+      <name>ARC</name>
+      <description>Zenithal equidistant</description>
+    </literal>
+    <literal>
+      <vodml-id>SkyProjectionType.ZPN</vodml-id>
+      <name>ZPN</name>
+      <description>Zenithal polynomial</description>
+    </literal>
+    <literal>
+      <vodml-id>SkyProjectionType.ZEA</vodml-id>
+      <name>ZEA</name>
+      <description>Zenithal equal-area</description>
+    </literal>
+    <literal>
+      <vodml-id>SkyProjectionType.AIR</vodml-id>
+      <name>AIR</name>
+      <description>Airy</description>
+    </literal>
+    <literal>
+      <vodml-id>SkyProjectionType.CYP</vodml-id>
+      <name>CYP</name>
+      <description>Cylindrical perspective</description>
+    </literal>
+    <literal>
+      <vodml-id>SkyProjectionType.CEA</vodml-id>
+      <name>CEA</name>
+      <description>Cylindrical equal-area</description>
+    </literal>
+    <literal>
+      <vodml-id>SkyProjectionType.CAR</vodml-id>
+      <name>CAR</name>
+      <description>Plate carree</description>
+    </literal>
+    <literal>
+      <vodml-id>SkyProjectionType.MER</vodml-id>
+      <name>MER</name>
+      <description>Mercator</description>
+    </literal>
+    <literal>
+      <vodml-id>SkyProjectionType.SFL</vodml-id>
+      <name>SFL</name>
+      <description>Sanson-Flamsteed</description>
+    </literal>
+    <literal>
+      <vodml-id>SkyProjectionType.PAR</vodml-id>
+      <name>PAR</name>
+      <description>Parabolic</description>
+    </literal>
+    <literal>
+      <vodml-id>SkyProjectionType.MOL</vodml-id>
+      <name>MOL</name>
+      <description>Mollweide</description>
+    </literal>
+    <literal>
+      <vodml-id>SkyProjectionType.AIT</vodml-id>
+      <name>AIT</name>
+      <description>Hammer-Aitoff</description>
+    </literal>
+    <literal>
+      <vodml-id>SkyProjectionType.COP</vodml-id>
+      <name>COP</name>
+      <description>Conic perspective</description>
+    </literal>
+    <literal>
+      <vodml-id>SkyProjectionType.COE</vodml-id>
+      <name>COE</name>
+      <description>Conic equal-area</description>
+    </literal>
+    <literal>
+      <vodml-id>SkyProjectionType.COD</vodml-id>
+      <name>COD</name>
+      <description>Conic equidistant</description>
+    </literal>
+    <literal>
+      <vodml-id>SkyProjectionType.COO</vodml-id>
+      <name>COO</name>
+      <description>Conic orthomorphic</description>
+    </literal>
+    <literal>
+      <vodml-id>SkyProjectionType.BON</vodml-id>
+      <name>BON</name>
+      <description>Bonne equal-area</description>
+    </literal>
+    <literal>
+      <vodml-id>SkyProjectionType.PCO</vodml-id>
+      <name>PCO</name>
+      <description>Polyconic</description>
+    </literal>
+    <literal>
+      <vodml-id>SkyProjectionType.TSC</vodml-id>
+      <name>TSC</name>
+      <description>Tangential spherical cube</description>
+    </literal>
+    <literal>
+      <vodml-id>SkyProjectionType.CSC</vodml-id>
+      <name>CSC</name>
+      <description>COBE Quadrilateralized spherical cube</description>
+    </literal>
+    <literal>
+      <vodml-id>SkyProjectionType.QSC</vodml-id>
+      <name>QSC</name>
+      <description>Quadrilateralized spherical cube</description>
+    </literal>
+  </enumeration>
+
+  <enumeration>
+    <vodml-id>SpectralProjectionType</vodml-id>
+    <name>SpectralProjectionType</name>
+    <description>Enumeration of non-linear spectral projection algorithm codes as listed in Table 2 of the FITS WCS paper III.
+NOTE: We exclude the TAB code from this list, that type is handled by the Lookup operation in this model.
+</description>
+    <literal>
+      <vodml-id>SpectralProjectionType.F2W</vodml-id>
+      <name>F2W</name>
+      <description>Frequency - Wavelength</description>
+    </literal>
+    <literal>
+      <vodml-id>SpectralProjectionType.F2V</vodml-id>
+      <name>F2V</name>
+      <description>Frequency - Apparent radial velocity</description>
+    </literal>
+    <literal>
+      <vodml-id>SpectralProjectionType.F2A</vodml-id>
+      <name>F2A</name>
+      <description>Frequency - Air wavelength</description>
+    </literal>
+    <literal>
+      <vodml-id>SpectralProjectionType.W2F</vodml-id>
+      <name>W2F</name>
+      <description>Wavelength - Frequency</description>
+    </literal>
+    <literal>
+      <vodml-id>SpectralProjectionType.W2V</vodml-id>
+      <name>W2V</name>
+      <description>Wavelength - Apparent radial velocity</description>
+    </literal>
+    <literal>
+      <vodml-id>SpectralProjectionType.W2A</vodml-id>
+      <name>W2A</name>
+      <description>Wavelength - Air wavelength</description>
+    </literal>
+    <literal>
+      <vodml-id>SpectralProjectionType.V2F</vodml-id>
+      <name>V2F</name>
+      <description>Apparent radial velocity - Frequency</description>
+    </literal>
+    <literal>
+      <vodml-id>SpectralProjectionType.V2W</vodml-id>
+      <name>V2W</name>
+      <description>Apparent radial velocity - Wavelength</description>
+    </literal>
+    <literal>
+      <vodml-id>SpectralProjectionType.V2A</vodml-id>
+      <name>V2A</name>
+      <description>Apparent radial velocity - Air wavelength</description>
+    </literal>
+    <literal>
+      <vodml-id>SpectralProjectionType.A2F</vodml-id>
+      <name>A2F</name>
+      <description>Air wavelength - Frequency</description>
+    </literal>
+    <literal>
+      <vodml-id>SpectralProjectionType.A2W</vodml-id>
+      <name>A2W</name>
+      <description>Air wavelength - Wavelength</description>
+    </literal>
+    <literal>
+      <vodml-id>SpectralProjectionType.A2V</vodml-id>
+      <name>A2V</name>
+      <description>Air wavelength - Apparent radial velocity</description>
+    </literal>
+    <literal>
+      <vodml-id>SpectralProjectionType.LOG</vodml-id>
+      <name>LOG</name>
+      <description>Logarithm</description>
+    </literal>
+    <literal>
+      <vodml-id>SpectralProjectionType.GRI</vodml-id>
+      <name>GRI</name>
+      <description>Grism</description>
+    </literal>
+    <literal>
+      <vodml-id>SpectralProjectionType.GRA</vodml-id>
+      <name>GRA</name>
+      <description>Grism in air</description>
+    </literal>
+  </enumeration>
+
+  <enumeration>
+    <vodml-id>SpectralCoordType</vodml-id>
+    <name>SpectralCoordType</name>
+    <description>Enumeration of spectral coordinate types as listed in Table 1 of the FITS WCS paper III.</description>
+    <literal>
+      <vodml-id>SpectralCoordType.FREQ</vodml-id>
+      <name>FREQ</name>
+      <description>Frequency</description>
+    </literal>
+    <literal>
+      <vodml-id>SpectralCoordType.ENER</vodml-id>
+      <name>ENER</name>
+      <description>Energy</description>
+    </literal>
+    <literal>
+      <vodml-id>SpectralCoordType.WAVN</vodml-id>
+      <name>WAVN</name>
+      <description>Wavenumber</description>
+    </literal>
+    <literal>
+      <vodml-id>SpectralCoordType.VRAD</vodml-id>
+      <name>VRAD</name>
+      <description>Radio velocity</description>
+    </literal>
+    <literal>
+      <vodml-id>SpectralCoordType.WAVE</vodml-id>
+      <name>WAVE</name>
+      <description>Vacuum wavelength</description>
+    </literal>
+    <literal>
+      <vodml-id>SpectralCoordType.VOPT</vodml-id>
+      <name>VOPT</name>
+      <description>Optical velocity</description>
+    </literal>
+    <literal>
+      <vodml-id>SpectralCoordType.ZOPT</vodml-id>
+      <name>ZOPT</name>
+      <description>Redshift</description>
+    </literal>
+    <literal>
+      <vodml-id>SpectralCoordType.AWAV</vodml-id>
+      <name>AWAV</name>
+      <description>Air wavelength</description>
+    </literal>
+    <literal>
+      <vodml-id>SpectralCoordType.VELO</vodml-id>
+      <name>VELO</name>
+      <description>Apparent radial velocity</description>
+    </literal>
+    <literal>
+      <vodml-id>SpectralCoordType.BETA</vodml-id>
+      <name>BETA</name>
+      <description>Beta factor (v/c)</description>
+    </literal>
+  </enumeration>
+
+  <objectType abstract="true">
+    <vodml-id>Mapping</vodml-id>
+    <name>Mapping</name>
+    <description>The "Mapping" object defines how to transform a set of "input" scalar values into a corresponding set of "output" scalar values.   The Mapping supports transforms in either direction via "operations" which we refer to here as the forward and inverse operations.  The forward operation transforms the mapping inputs into mapping outputs.  The inverse operation transforms the mapping outputs into mapping inputs.  
+
+There is possibility here for confusion regarding the meaning of the words "input" and "output". A clear distinction should be drawn between the inputs and outputs of a mapping and those of an operation.  The inputs and outputs of a mapping are the same as the inputs and outputs of the mapping's forward operation, but are the reverse of the inputs and outputs of the mapping's inverse operation. Thus, the inputs of the inverse operation are the outputs of the mapping, etc.
+
+Note, a mapping may in principle be inverted, but an operation cannot be inverted.  Inverting a mapping means reversing the roles performed by its two operation - the original inverse operation is used as the new forward operation, and vice-versa.
+
+We could support both forward and inverse operations by defining entirely separate expressions to describe the two transformations.  However, that approach is bulky and requires more maintanence as any change to one object would require equivalent changes be made to the other.  Since many operations have a natural inverse, a safer, more compact and flexible approach is to use a single object to describe both transformations.  With this approach, a change to the one transform automatically applies to both directions.
+
+This model leverages this compact approach, defining mappings with sufficient information to support both forward and inverse operations.   Many mappings, such as shift, and rotation, have an analytical inverse, and both operations can be supported by a single set of parameters.  For others, like polynomial, this is not true and so one of the two operations may be undefined.  The BiDirectionalMap may be used to explicitely assign a different mapping for each direction.
+
+In this model, we describe three flavors of mappings which allow specifications from very simple relations to arbitrarily complex relations built from a set of component mappings:
+   * Atomic Mappings which perform a single arithmatic operation 
+   * BiDirectional Mapping with explicit specification of the mapping in the forward and inverse direction
+   * Compound Mappings which are used to control the workflow and build arbitrarily complex operations
+
+
+</description>
+    <attribute>
+      <vodml-id>Mapping.invert</vodml-id>
+      <name>invert</name>
+      <description>Boolean flag indicates that the Mapping content defines its inverse operation rather than its forward operation and so the Mapping should be inverted before being used. In other words, the forward operation of the Mapping should be implemented using the inverse operation implied by the Mapping's contents, and  vice versa.
+
+For many operations, the inverse transformation can be directly derived from the forward transform.  For instance, the inverse of a transform that simply adds a constant to each input is a transform of the same type, with a negated constant.  However, there are potentially operations for which this cannot be done.  For instance, the inverse of a transform that maps 3D Cartesian coordinates to spherical coordinates cannot be expressed by the same algorithm.  This flag indicates that it should be used in its inverse sense.  
+
+In addition, the invert flag allows a complex compound transformation to be be inverted simply by toggling its invert flag.  Without such a flag each component would need to be re-written to represent its inverse (if possible), and the order of serial transformations would need to be reversed - a much more complex and error prone process.
+</description>
+      <datatype>
+        <vodml-ref>ivoa:boolean</vodml-ref>
+      </datatype>
+      <multiplicity>
+        <minOccurs>0</minOccurs>
+        <maxOccurs>1</maxOccurs>
+      </multiplicity>
+    </attribute>
+  </objectType>
+
+  <objectType abstract="true">
+    <vodml-id>CompoundMap</vodml-id>
+    <name>CompoundMap</name>
+    <description>Abstract class to facilitate the combination of Mappings in various ways.  Since they are themselves mappings, they can be used as a components in other compound mappings to create arbitrarily complex transform expressions.  
+</description>
+    <extends>
+      <vodml-ref>trans:Mapping</vodml-ref>
+    </extends>
+    <composition>
+      <vodml-id>CompoundMap.cptMap</vodml-id>
+      <name>cptMap</name>
+      <description>List of component mappings.  Joins multiple mappings together to form a single unit.  The interpretation of the list set depends on the particular sub-class of CompoundMap.
+</description>
+      <datatype>
+        <vodml-ref>trans:MapRef</vodml-ref>
+      </datatype>
+      <multiplicity>
+        <minOccurs>1</minOccurs>
+        <maxOccurs>-1</maxOccurs>
+      </multiplicity>
+      <isOrdered>true</isOrdered>
+    </composition>
+  </objectType>
+
+  <objectType>
+    <vodml-id>ComposeMap</vodml-id>
+    <name>ComposeMap</name>
+    <description>Combines the component mappings in series. This allows the building of multi-stage transforms such as a Matrix operation followed by a WCS Projection.  When the invert flag is 'True', the forward operation of the ComposeMap is defined by the inverse of the content, iterating the component list in reverse order, executing the inverse operation of each component.
+</description>
+    <extends>
+      <vodml-ref>trans:CompoundMap</vodml-ref>
+    </extends>
+  </objectType>
+
+  <objectType>
+    <vodml-id>ConcatenateMap</vodml-id>
+    <name>ConcatenateMap</name>
+    <description>Combines the component mappings in parallel. This enables the building of a mapping which covers the full dimension space of the input. Axes are distributed to the component mappings in order. For example, to perform a shift on a 2-dimensional coordinate (x,y), one would join two Shift maps giving the offset in x and y respectively. 
+When the 'invert' flag is True, the forward operation of the ConcatenateMap is defined by applying the inverse operations of the component mappings.</description>
+    <extends>
+      <vodml-ref>trans:CompoundMap</vodml-ref>
+    </extends>
+  </objectType>
+
+  <objectType>
+    <vodml-id>Permute</vodml-id>
+    <name>Permute</name>
+    <description>Permute the order and possibly number of dimensions between operations. This operation facilitates the workflow through the operation sequence. It is comprised of an ordered axismap list defining the output axis sequence in terms of the source (input) axes. It supports the reorder, duplication, and dropping of dimensions. 
+   Reorder Example: We have a 3-dimensional coordinate (x,y,z) and wish to perform a 2-dimensional transform on the (x,z) plane. Define a Permute operation to reorder the axes from (x,y,z) to (y,x,z) using an axismap list specifying the new axis order, [2,1,3]. The results feed into the next step ( 1D + 2D operations ). 
+   Duplicate Example: We have 2-dimensional coordinate (x,y) feeding two Polynomial2D operations to form (x',y'). Define a Permute operation with axismap list specifying sourceAxis set [1,2,1,2]. The result feeds into the next step ( Polynomial2D + Polynomial2D operations). 
+   Drop Example: We have a 5-dimensional input feeding into a 3x3 Matrix operation. Define a Permute operation selecting the relevant axis set [1,3,5], the remaining axes, [2,4], are dropped. 
+   Add Example: We have a 2-dimensional operation feeding into axes [1,3] of a 3-dimensional operation. Define a Permute operation with numSourceAxes=2; and sourceAxis set [1,0,2] where output axis 2 also specifies the fixed seed value.
+</description>
+    <extends>
+      <vodml-ref>trans:Mapping</vodml-ref>
+    </extends>
+    <attribute>
+      <vodml-id>Permute.numSourceAxes</vodml-id>
+      <name>numSourceAxes</name>
+      <description>The number of input axes. Used to verify dimensional coverage in forward and inverse directions. For example, numSourceAxes=4 with axismap=[1,3] indicates that axes [2,4] have been dropped.
+</description>
+      <datatype>
+        <vodml-ref>ivoa:nonnegativeInteger</vodml-ref>
+      </datatype>
+      <multiplicity>
+        <minOccurs>1</minOccurs>
+        <maxOccurs>1</maxOccurs>
+      </multiplicity>
+    </attribute>
+    <composition>
+      <vodml-id>Permute.axismap</vodml-id>
+      <name>axismap</name>
+      <description>Ordered list defining the number and order of the resulting axis set.  Each entry provides the source (input) dimension for that output dimension.</description>
+      <datatype>
+        <vodml-ref>trans:PermuteAxis</vodml-ref>
+      </datatype>
+      <multiplicity>
+        <minOccurs>0</minOccurs>
+        <maxOccurs>-1</maxOccurs>
+      </multiplicity>
+      <isOrdered>true</isOrdered>
+    </composition>
+  </objectType>
+
+  <objectType>
+    <vodml-id>PermuteAxis</vodml-id>
+    <name>PermuteAxis</name>
+    <description>Entry for the Permute operation, this object defines the mapping of input dimension to output dimension.  The output dimension is determined from its order in the axismap list.</description>
+    <attribute>
+      <vodml-id>PermuteAxis.sourceAxis</vodml-id>
+      <name>sourceAxis</name>
+      <description>Source (input) dimension number, 1 based.</description>
+      <datatype>
+        <vodml-ref>ivoa:nonnegativeInteger</vodml-ref>
+      </datatype>
+      <multiplicity>
+        <minOccurs>1</minOccurs>
+        <maxOccurs>1</maxOccurs>
+      </multiplicity>
+    </attribute>
+    <attribute>
+      <vodml-id>PermuteAxis.seedValue</vodml-id>
+      <name>seedValue</name>
+      <description>Value to assign for the new dimensional axis.</description>
+      <datatype>
+        <vodml-ref>ivoa:real</vodml-ref>
+      </datatype>
+      <multiplicity>
+        <minOccurs>0</minOccurs>
+        <maxOccurs>1</maxOccurs>
+      </multiplicity>
+    </attribute>
+  </objectType>
+
+  <objectType>
+    <vodml-id>Unit</vodml-id>
+    <name>Unit</name>
+    <description>A 1-Dimensional operation which makes no change to the inputs. ( X' = X )
+</description>
+    <extends>
+      <vodml-ref>trans:Mapping</vodml-ref>
+    </extends>
+  </objectType>
+
+  <objectType>
+    <vodml-id>Shift</vodml-id>
+    <name>Shift</name>
+    <description>A 1-Dimensional operation defining a simple offset. ( X' = X + offset )
+</description>
+    <extends>
+      <vodml-ref>trans:Mapping</vodml-ref>
+    </extends>
+    <attribute>
+      <vodml-id>Shift.offset</vodml-id>
+      <name>offset</name>
+      <description>The amount of offset to apply.
+</description>
+      <datatype>
+        <vodml-ref>ivoa:real</vodml-ref>
+      </datatype>
+      <multiplicity>
+        <minOccurs>1</minOccurs>
+        <maxOccurs>1</maxOccurs>
+      </multiplicity>
+    </attribute>
+  </objectType>
+
+  <objectType>
+    <vodml-id>Scale</vodml-id>
+    <name>Scale</name>
+    <description>A 1-Dimensional operator for simple scaling. ( X' = factor*X )
+</description>
+    <extends>
+      <vodml-ref>trans:Mapping</vodml-ref>
+    </extends>
+    <attribute>
+      <vodml-id>Scale.factor</vodml-id>
+      <name>factor</name>
+      <description>The scale factor.
+</description>
+      <datatype>
+        <vodml-ref>ivoa:real</vodml-ref>
+      </datatype>
+      <multiplicity>
+        <minOccurs>1</minOccurs>
+        <maxOccurs>1</maxOccurs>
+      </multiplicity>
+    </attribute>
+  </objectType>
+
+  <objectType>
+    <vodml-id>Rotate2D</vodml-id>
+    <name>Rotate2D</name>
+    <description>A 2-Dimensional rotation operation.
+</description>
+    <extends>
+      <vodml-ref>trans:Mapping</vodml-ref>
+    </extends>
+    <attribute>
+      <vodml-id>Rotate2D.angle</vodml-id>
+      <name>angle</name>
+      <description>Rotation angle, in degrees, from the positive direction of axis 1 toward the positive direction of axis 2.
+</description>
+      <datatype>
+        <vodml-ref>ivoa:real</vodml-ref>
+      </datatype>
+      <multiplicity>
+        <minOccurs>1</minOccurs>
+        <maxOccurs>1</maxOccurs>
+      </multiplicity>
+    </attribute>
+  </objectType>
+
+  <objectType>
+    <vodml-id>EulerRotation</vodml-id>
+    <name>EulerRotation</name>
+    <description>Defines a rotation operation in a 3-dimensional cartesian coordinate space, defined as a series of rotations about the native axes (x,y,z).
+</description>
+    <extends>
+      <vodml-ref>trans:Mapping</vodml-ref>
+    </extends>
+    <composition>
+      <vodml-id>EulerRotation.eulerAngle</vodml-id>
+      <name>eulerAngle</name>
+      <description>Rotation angle about a specified axis.
+</description>
+      <datatype>
+        <vodml-ref>trans:EulerAngle</vodml-ref>
+      </datatype>
+      <multiplicity>
+        <minOccurs>1</minOccurs>
+        <maxOccurs>-1</maxOccurs>
+      </multiplicity>
+    </composition>
+  </objectType>
+
+  <objectType>
+    <vodml-id>EulerAngle</vodml-id>
+    <name>EulerAngle</name>
+    <description>Angular rotation about a particular axis of a 3-dimensional cartesian coordinate space.
+</description>
+    <attribute>
+      <vodml-id>EulerAngle.rotationAxis</vodml-id>
+      <name>rotationAxis</name>
+      <description>Identifies the axis of rotation. MUST be 'x', 'y', or 'z'
+</description>
+      <datatype>
+        <vodml-ref>ivoa:string</vodml-ref>
+      </datatype>
+      <multiplicity>
+        <minOccurs>1</minOccurs>
+        <maxOccurs>1</maxOccurs>
+      </multiplicity>
+    </attribute>
+    <attribute>
+      <vodml-id>EulerAngle.angle</vodml-id>
+      <name>angle</name>
+      <description>Angle of rotation, in degrees. Angle sign follows the right-hand rule, where positive values indicate clockwise rotation (looking in +axis direction), negative values for counter-clockwise.
+</description>
+      <datatype>
+        <vodml-ref>ivoa:real</vodml-ref>
+      </datatype>
+      <multiplicity>
+        <minOccurs>1</minOccurs>
+        <maxOccurs>1</maxOccurs>
+      </multiplicity>
+    </attribute>
+  </objectType>
+
+  <objectType>
+    <vodml-id>Matrix</vodml-id>
+    <name>Matrix</name>
+    <description>An M x N matrix operation. Each cell of the matrix is provided by a MatrixElement object. Missing elements should be considered to equal 0.
+</description>
+    <extends>
+      <vodml-ref>trans:Mapping</vodml-ref>
+    </extends>
+    <constraint>
+      <description>element maxlength = M*N</description>
+    </constraint>
+    <attribute>
+      <vodml-id>Matrix.M</vodml-id>
+      <name>M</name>
+      <description>Number of rows in the matrix.
+</description>
+      <datatype>
+        <vodml-ref>ivoa:nonnegativeInteger</vodml-ref>
+      </datatype>
+      <multiplicity>
+        <minOccurs>1</minOccurs>
+        <maxOccurs>1</maxOccurs>
+      </multiplicity>
+    </attribute>
+    <attribute>
+      <vodml-id>Matrix.N</vodml-id>
+      <name>N</name>
+      <description>Number of columns in the matrix.
+</description>
+      <datatype>
+        <vodml-ref>ivoa:nonnegativeInteger</vodml-ref>
+      </datatype>
+      <multiplicity>
+        <minOccurs>1</minOccurs>
+        <maxOccurs>1</maxOccurs>
+      </multiplicity>
+    </attribute>
+    <composition>
+      <vodml-id>Matrix.element</vodml-id>
+      <name>element</name>
+      <description>Collection of MatrixElements which define each cell of the matrix. The total number of elements MUST NOT exceed M*N, any missing elements result in a cell with value=0.0.
+</description>
+      <datatype>
+        <vodml-ref>trans:MatrixElement</vodml-ref>
+      </datatype>
+      <multiplicity>
+        <minOccurs>0</minOccurs>
+        <maxOccurs>-1</maxOccurs>
+      </multiplicity>
+    </composition>
+  </objectType>
+
+  <objectType>
+    <vodml-id>MatrixElement</vodml-id>
+    <name>MatrixElement</name>
+    <description>The value of cell m,n in an M x N matrix.
+</description>
+    <attribute>
+      <vodml-id>MatrixElement.m</vodml-id>
+      <name>m</name>
+      <description>Matrix cell row number.
+</description>
+      <datatype>
+        <vodml-ref>ivoa:nonnegativeInteger</vodml-ref>
+      </datatype>
+      <multiplicity>
+        <minOccurs>1</minOccurs>
+        <maxOccurs>1</maxOccurs>
+      </multiplicity>
+    </attribute>
+    <attribute>
+      <vodml-id>MatrixElement.n</vodml-id>
+      <name>n</name>
+      <description>Matrix cell column number.
+</description>
+      <datatype>
+        <vodml-ref>ivoa:nonnegativeInteger</vodml-ref>
+      </datatype>
+      <multiplicity>
+        <minOccurs>1</minOccurs>
+        <maxOccurs>1</maxOccurs>
+      </multiplicity>
+    </attribute>
+    <attribute>
+      <vodml-id>MatrixElement.value</vodml-id>
+      <name>value</name>
+      <description>Matrix cell value.
+</description>
+      <datatype>
+        <vodml-ref>ivoa:real</vodml-ref>
+      </datatype>
+      <multiplicity>
+        <minOccurs>1</minOccurs>
+        <maxOccurs>1</maxOccurs>
+      </multiplicity>
+    </attribute>
+  </objectType>
+
+  <objectType abstract="true">
+    <vodml-id>Projection</vodml-id>
+    <name>Projection</name>
+    <description>Abstract head of World Coordinate System (WCS) projection operations. We do not attempt to define the operations here, but instead, provide extensions which support the transforms described in the FITS WCS papers II and III.
+</description>
+    <extends>
+      <vodml-ref>trans:Mapping</vodml-ref>
+    </extends>
+    <composition>
+      <vodml-id>Projection.param</vodml-id>
+      <name>param</name>
+      <description>Set of 0 or more parameters providing supplemental metadata required to execute a particular projection algorithm. The number and meaning of the parameters depends on the algorithm. They are typically in the from of keyword/value pairs, so we provide a simple ProjectionParam element to accommodate these. The detailed content description is left to the WCS paper.
+</description>
+      <datatype>
+        <vodml-ref>trans:ProjectionParam</vodml-ref>
+      </datatype>
+      <multiplicity>
+        <minOccurs>0</minOccurs>
+        <maxOccurs>-1</maxOccurs>
+      </multiplicity>
+    </composition>
+  </objectType>
+
+  <objectType>
+    <vodml-id>ProjectionParam</vodml-id>
+    <name>ProjectionParam</name>
+    <description>Simple parameter specification for WCS Projections. The parameter is modeled as a simple name/value pair. The details of expectations for the various projection algorithms is left to the WCS paper describing the algorithm.
+</description>
+    <attribute>
+      <vodml-id>ProjectionParam.name</vodml-id>
+      <name>name</name>
+      <description>The parameter name as described in the WCS papers for each operation type.
+</description>
+      <datatype>
+        <vodml-ref>ivoa:string</vodml-ref>
+      </datatype>
+      <multiplicity>
+        <minOccurs>1</minOccurs>
+        <maxOccurs>1</maxOccurs>
+      </multiplicity>
+    </attribute>
+    <attribute>
+      <vodml-id>ProjectionParam.value</vodml-id>
+      <name>value</name>
+      <description>The value for the parameter.
+</description>
+      <datatype>
+        <vodml-ref>ivoa:real</vodml-ref>
+      </datatype>
+      <multiplicity>
+        <minOccurs>1</minOccurs>
+        <maxOccurs>1</maxOccurs>
+      </multiplicity>
+    </attribute>
+  </objectType>
+
+  <objectType>
+    <vodml-id>SkyProjection</vodml-id>
+    <name>SkyProjection</name>
+    <description>This class corresponds to the Spherical Projection component of the FITS WCS paper II. As in the paper, this operation describes the mapping from the intermediate &amp;quot;Projection Plane&amp;quot; to the &amp;quot;Native Spherical&amp;quot; coordinate system. This model supports all defined projection types, where the appropriate code is specified in the algorithm attribute. All projection parameters are to be provided through the ProjectionParam list according to the descriptions given in the FITS WCS paper.
+</description>
+    <extends>
+      <vodml-ref>trans:Projection</vodml-ref>
+    </extends>
+    <attribute>
+      <vodml-id>SkyProjection.algorithm</vodml-id>
+      <name>algorithm</name>
+      <description>The projection algorithm to apply. The value MUST be taken from the enumeration of standard sky projection algorithms. Extracted from &amp;#39;ctype&amp;#39; in the FITS WCS representations.
+</description>
+      <datatype>
+        <vodml-ref>trans:SkyProjectionType</vodml-ref>
+      </datatype>
+      <multiplicity>
+        <minOccurs>1</minOccurs>
+        <maxOccurs>1</maxOccurs>
+      </multiplicity>
+    </attribute>
+  </objectType>
+
+  <objectType>
+    <vodml-id>SkyProjRotate</vodml-id>
+    <name>SkyProjRotate</name>
+    <description>This class extends SkyProjection to include the Spherical Rotation component of the FITS WCS paper II. This operation describes the mapping from the "Native Spherical" coordinate system to the "Celestial" coordinate system. The reference values are provided at the appropriate attribute, while all other parameters (e.g. LONPOLE, LATPOLE) are to be provided through the ProjectionParam list according to the descriptions given in the FITS WCS paper.
+</description>
+    <extends>
+      <vodml-ref>trans:SkyProjection</vodml-ref>
+    </extends>
+    <attribute>
+      <vodml-id>SkyProjRotate.referenceValue</vodml-id>
+      <name>referenceValue</name>
+      <description>The target reference values in each dimension. Equivalent to 'crval' in FITS WCS representations.
+</description>
+      <datatype>
+        <vodml-ref>ivoa:real</vodml-ref>
+      </datatype>
+      <multiplicity>
+        <minOccurs>2</minOccurs>
+        <maxOccurs>2</maxOccurs>
+      </multiplicity>
+    </attribute>
+  </objectType>
+
+  <objectType>
+    <vodml-id>SpectralProjection</vodml-id>
+    <name>SpectralProjection</name>
+    <description>This class represents a nonlinear one-dimensional spectral transform as detailed in the FITS WCS paper III.
+</description>
+    <extends>
+      <vodml-ref>trans:Projection</vodml-ref>
+    </extends>
+    <attribute>
+      <vodml-id>SpectralProjection.referenceValue</vodml-id>
+      <name>referenceValue</name>
+      <description>The target reference value for the axis. Equivalent to 'crval' in FITS WCS representations.</description>
+      <datatype>
+        <vodml-ref>ivoa:real</vodml-ref>
+      </datatype>
+      <multiplicity>
+        <minOccurs>1</minOccurs>
+        <maxOccurs>1</maxOccurs>
+      </multiplicity>
+    </attribute>
+    <attribute>
+      <vodml-id>SpectralProjection.algorithm</vodml-id>
+      <name>algorithm</name>
+      <description>The projection algorithm to apply. The value MUST be taken from the enumeration of non-linear spectral projection algorithms. Extracted from 'ctype' in FITS WCS representations.
+</description>
+      <datatype>
+        <vodml-ref>trans:SpectralProjectionType</vodml-ref>
+      </datatype>
+      <multiplicity>
+        <minOccurs>1</minOccurs>
+        <maxOccurs>1</maxOccurs>
+      </multiplicity>
+    </attribute>
+    <attribute>
+      <vodml-id>SpectralProjection.coordType</vodml-id>
+      <name>coordType</name>
+      <description>The resulting spectral coordinate type code. Values MUST be taken from the enumerated list of spectral coordinate types. Extracted from 'ctype' in FITS WCS representations.
+</description>
+      <datatype>
+        <vodml-ref>trans:SpectralCoordType</vodml-ref>
+      </datatype>
+      <multiplicity>
+        <minOccurs>1</minOccurs>
+        <maxOccurs>1</maxOccurs>
+      </multiplicity>
+    </attribute>
+  </objectType>
+
+  <objectType abstract="true">
+    <vodml-id>Polynomial</vodml-id>
+    <name>Polynomial</name>
+    <description>Abstract head of a family of Polynomial distortion operations.</description>
+    <extends>
+      <vodml-ref>trans:Mapping</vodml-ref>
+    </extends>
+    <attribute>
+      <vodml-id>Polynomial.order</vodml-id>
+      <name>order</name>
+      <description>The order, or degree, of the polynomial expression.
+</description>
+      <datatype>
+        <vodml-ref>ivoa:nonnegativeInteger</vodml-ref>
+      </datatype>
+      <multiplicity>
+        <minOccurs>1</minOccurs>
+        <maxOccurs>1</maxOccurs>
+      </multiplicity>
+    </attribute>
+  </objectType>
+
+  <objectType>
+    <vodml-id>Polynomial1D</vodml-id>
+    <name>Polynomial1D</name>
+    <description>A 1-Dimensional Polynomial transform represented by the expression: X' = SUM( Ci*X**i), i=0..order. Each term is provided by a PolyCoeff1D object. Missing terms are considered to have a coefficient of 0.0.</description>
+    <extends>
+      <vodml-ref>trans:Polynomial</vodml-ref>
+    </extends>
+    <composition>
+      <vodml-id>Polynomial1D.term</vodml-id>
+      <name>term</name>
+      <description>A term in the polynomial expression.
+</description>
+      <datatype>
+        <vodml-ref>trans:PolyCoeff1D</vodml-ref>
+      </datatype>
+      <multiplicity>
+        <minOccurs>1</minOccurs>
+        <maxOccurs>-1</maxOccurs>
+      </multiplicity>
+    </composition>
+  </objectType>
+
+  <objectType>
+    <vodml-id>PolyCoeff1D</vodml-id>
+    <name>PolyCoeff1D</name>
+    <description>A term of the polynomial expression. This object provides the coefficient (c) and power (p) of the term, forming the expression c*X**p.
+</description>
+    <attribute>
+      <vodml-id>PolyCoeff1D.coeff</vodml-id>
+      <name>coeff</name>
+      <description>Multiplicitive coefficient of the term.
+</description>
+      <datatype>
+        <vodml-ref>ivoa:real</vodml-ref>
+      </datatype>
+      <multiplicity>
+        <minOccurs>1</minOccurs>
+        <maxOccurs>1</maxOccurs>
+      </multiplicity>
+    </attribute>
+    <attribute>
+      <vodml-id>PolyCoeff1D.power</vodml-id>
+      <name>power</name>
+      <description>The power to raise the value for this term.
+</description>
+      <datatype>
+        <vodml-ref>ivoa:nonnegativeInteger</vodml-ref>
+      </datatype>
+      <multiplicity>
+        <minOccurs>1</minOccurs>
+        <maxOccurs>1</maxOccurs>
+      </multiplicity>
+    </attribute>
+  </objectType>
+
+  <objectType>
+    <vodml-id>Polynomial2D</vodml-id>
+    <name>Polynomial2D</name>
+    <description>A 2-Dimensional Polynomial transform represented by the expression: X' = SUMi,j( Cij*X**i*Y**j), i+j&lt;=order. Each term is provided by a PolyCoeff2D object. Missing terms are considered to have a coefficient of 0.0.
+</description>
+    <extends>
+      <vodml-ref>trans:Polynomial</vodml-ref>
+    </extends>
+    <composition>
+      <vodml-id>Polynomial2D.term</vodml-id>
+      <name>term</name>
+      <description>A term in the polynomial expression.</description>
+      <datatype>
+        <vodml-ref>trans:PolyCoeff2D</vodml-ref>
+      </datatype>
+      <multiplicity>
+        <minOccurs>1</minOccurs>
+        <maxOccurs>-1</maxOccurs>
+      </multiplicity>
+    </composition>
+  </objectType>
+
+  <objectType>
+    <vodml-id>PolyCoeff2D</vodml-id>
+    <name>PolyCoeff2D</name>
+    <description>A term of the polynomial expression. This object provides the coefficient (c) and power (p) of the term, forming the expression c*X**p[0]*Y**p[1].</description>
+    <attribute>
+      <vodml-id>PolyCoeff2D.coeff</vodml-id>
+      <name>coeff</name>
+      <description>Multiplicitive coefficient of the term.
+</description>
+      <datatype>
+        <vodml-ref>ivoa:real</vodml-ref>
+      </datatype>
+      <multiplicity>
+        <minOccurs>1</minOccurs>
+        <maxOccurs>1</maxOccurs>
+      </multiplicity>
+    </attribute>
+    <attribute>
+      <vodml-id>PolyCoeff2D.power</vodml-id>
+      <name>power</name>
+      <description>The power to raise the values for this term in each dimension.
+</description>
+      <datatype>
+        <vodml-ref>ivoa:nonnegativeInteger</vodml-ref>
+      </datatype>
+      <multiplicity>
+        <minOccurs>2</minOccurs>
+        <maxOccurs>2</maxOccurs>
+      </multiplicity>
+    </attribute>
+  </objectType>
+
+  <objectType>
+    <vodml-id>Lookup</vodml-id>
+    <name>Lookup</name>
+    <description>Defines a lookup table operation. The Lookup is comprised of a series of value pairs (LookupEntry) which link specific points in the native system to corresponding points in the target system.  The 'interpolation' flag tells the user how to interpret data which falls between entries in the lookup table.  
+All members of the series MUST be of the same type.  Lookup tables with StringEntry type content MUST have interpolation="None".  Handling Enumerated data: A common usage of a Lookup operation is to map image pixel index to an enumeration, such as a Polarization state. This can be handled by two means: 1) Define a numeric equivalent for each enumeration literal, and use NumericEntry types. Casting to the corresponding literal occurs outside of the operation. 2) Your local model can define a LookupEntry extension which maps the native value directly the target EnumerationLiteral. The details of either approach for particular enumerations is considered outside the scope of this document.
+</description>
+    <extends>
+      <vodml-ref>trans:Mapping</vodml-ref>
+    </extends>
+    <attribute>
+      <vodml-id>Lookup.interpolation</vodml-id>
+      <name>interpolation</name>
+      <description>Specifies the form of interpolation, if any, prescribed to be performed.
+</description>
+      <datatype>
+        <vodml-ref>trans:InterpolationMethod</vodml-ref>
+      </datatype>
+      <multiplicity>
+        <minOccurs>0</minOccurs>
+        <maxOccurs>1</maxOccurs>
+      </multiplicity>
+    </attribute>
+    <attribute>
+      <vodml-id>Lookup.bounds_error</vodml-id>
+      <name>bounds_error</name>
+      <description>Flag to specify behaviour outside the lookup table data bounds. True indicates an error condition, False indicates that the associated "fill" entry should be returned. If no "fill" entry is provided, the value should be extrapolated.
+</description>
+      <datatype>
+        <vodml-ref>ivoa:boolean</vodml-ref>
+      </datatype>
+      <multiplicity>
+        <minOccurs>0</minOccurs>
+        <maxOccurs>1</maxOccurs>
+      </multiplicity>
+    </attribute>
+    <composition>
+      <vodml-id>Lookup.entry</vodml-id>
+      <name>entry</name>
+      <description>Set of lookup table entries forming a discrete mapping from the native space to the target space.</description>
+      <datatype>
+        <vodml-ref>trans:LookupEntry</vodml-ref>
+      </datatype>
+      <multiplicity>
+        <minOccurs>1</minOccurs>
+        <maxOccurs>-1</maxOccurs>
+      </multiplicity>
+      <isOrdered>true</isOrdered>
+    </composition>
+  </objectType>
+
+  <objectType abstract="true">
+    <vodml-id>LookupEntry</vodml-id>
+    <name>LookupEntry</name>
+    <description>This is an abstract head of lookup table entry objects. Each entry provides a discrete translation of a 'native' value to the corresponding 'target' value.
+</description>
+    <attribute>
+      <vodml-id>LookupEntry.fill</vodml-id>
+      <name>fill</name>
+      <description>When TRUE, the entry provides values to be used outside the Lookup table data domain. MUST only appear first or last in the sequence. If missing, it is considered to be FALSE.
+</description>
+      <datatype>
+        <vodml-ref>ivoa:boolean</vodml-ref>
+      </datatype>
+      <multiplicity>
+        <minOccurs>0</minOccurs>
+        <maxOccurs>1</maxOccurs>
+      </multiplicity>
+    </attribute>
+  </objectType>
+
+  <objectType>
+    <vodml-id>NumericEntry</vodml-id>
+    <name>NumericEntry</name>
+    <description>A 1-Dimensional discrete mapping of numeric values.</description>
+    <extends>
+      <vodml-ref>trans:LookupEntry</vodml-ref>
+    </extends>
+    <attribute>
+      <vodml-id>NumericEntry.nativeValue</vodml-id>
+      <name>nativeValue</name>
+      <description>The native, or reference, value of the lookup entry.</description>
+      <datatype>
+        <vodml-ref>ivoa:real</vodml-ref>
+      </datatype>
+      <multiplicity>
+        <minOccurs>1</minOccurs>
+        <maxOccurs>1</maxOccurs>
+      </multiplicity>
+    </attribute>
+    <attribute>
+      <vodml-id>NumericEntry.targetValue</vodml-id>
+      <name>targetValue</name>
+      <description>The target, or resulting, value of the lookup entry.
+</description>
+      <datatype>
+        <vodml-ref>ivoa:real</vodml-ref>
+      </datatype>
+      <multiplicity>
+        <minOccurs>1</minOccurs>
+        <maxOccurs>1</maxOccurs>
+      </multiplicity>
+    </attribute>
+  </objectType>
+
+  <objectType>
+    <vodml-id>NumericEntry2D</vodml-id>
+    <name>NumericEntry2D</name>
+    <description>A 2-Dimensional discrete mapping of numeric values.
+</description>
+    <extends>
+      <vodml-ref>trans:LookupEntry</vodml-ref>
+    </extends>
+    <attribute>
+      <vodml-id>NumericEntry2D.nativeValue</vodml-id>
+      <name>nativeValue</name>
+      <description>The native, or reference, value of the lookup entry.
+</description>
+      <datatype>
+        <vodml-ref>ivoa:real</vodml-ref>
+      </datatype>
+      <multiplicity>
+        <minOccurs>2</minOccurs>
+        <maxOccurs>2</maxOccurs>
+      </multiplicity>
+    </attribute>
+    <attribute>
+      <vodml-id>NumericEntry2D.targetValue</vodml-id>
+      <name>targetValue</name>
+      <description>The target, or resulting, value of the lookup entry.
+</description>
+      <datatype>
+        <vodml-ref>ivoa:real</vodml-ref>
+      </datatype>
+      <multiplicity>
+        <minOccurs>2</minOccurs>
+        <maxOccurs>2</maxOccurs>
+      </multiplicity>
+    </attribute>
+  </objectType>
+
+  <objectType>
+    <vodml-id>StringEntry</vodml-id>
+    <name>StringEntry</name>
+    <description>A 1-Dimensional discrete mapping of an integer counter to a corresponding string form. Since the result is non-numeric, a Lookup operation with StringEntry-s can only be used at the end of a Transform sequence.
+</description>
+    <extends>
+      <vodml-ref>trans:LookupEntry</vodml-ref>
+    </extends>
+    <attribute>
+      <vodml-id>StringEntry.nativeValue</vodml-id>
+      <name>nativeValue</name>
+      <description>The native, or reference, value of the lookup entry.
+</description>
+      <datatype>
+        <vodml-ref>ivoa:integer</vodml-ref>
+      </datatype>
+      <multiplicity>
+        <minOccurs>1</minOccurs>
+        <maxOccurs>1</maxOccurs>
+      </multiplicity>
+    </attribute>
+    <attribute>
+      <vodml-id>StringEntry.targetValue</vodml-id>
+      <name>targetValue</name>
+      <description>The target, or resulting, value of the lookup entry.</description>
+      <datatype>
+        <vodml-ref>ivoa:string</vodml-ref>
+      </datatype>
+      <multiplicity>
+        <minOccurs>1</minOccurs>
+        <maxOccurs>1</maxOccurs>
+      </multiplicity>
+    </attribute>
+  </objectType>
+
+  <objectType>
+    <vodml-id>TransformSet</vodml-id>
+    <name>TransformSet</name>
+    <description>TransformSet supports the relation of coordinate systems via Mappings.  The design is such that it supports the relation of collections of related coordinates systems by the various mappings between them.  
+
+A single TransformSet can relate a tree of spatial coordinate systems, individual TransNodes can be used as the parent for multiple branches.  For example:
+  * pixel - chip - tiled detector - detector - tangent plane
+  * chip - chip physical
+  * detector - mirror spherical
+  * tangent plane - celestial
+
+Each transition is encapsulated by a TransNode instance linking the parent coordinate system of its parent TransNode to the target coordinate system (that of the TransNode) with a Mapping (from the parent to target systems).  
+A simple transform from system A to system B requires two TransNodes, one describing system A (with no Mapping), and another describing system B with the Mapping from A to B.
+</description>
+    <composition>
+      <vodml-id>TransformSet.node</vodml-id>
+      <name>node</name>
+      <description>A node in the transform set, relating a parent and target coordinate system with the corresponding mapping specification.</description>
+      <datatype>
+        <vodml-ref>trans:TransNode</vodml-ref>
+      </datatype>
+      <multiplicity>
+        <minOccurs>1</minOccurs>
+        <maxOccurs>-1</maxOccurs>
+      </multiplicity>
+    </composition>
+  </objectType>
+
+  <objectType>
+    <vodml-id>TransNode</vodml-id>
+    <name>TransNode</name>
+    <description>TransNode is a container object relating a parent coordinate system and a target coordinate system (that of the node) with the mapping relation between them.  The associated Mapping MUST be constructed such that the mapping inputs correspond to the parent coordinate system and the mapping outputs to the target coordinate system.
+
+If either the parent node or mapping is NULL, the other MUST also be NULL.  This forms a 'root' node, containing only the target coordinate system, and serves as an origination node in the TransformSet.
+
+If the target is NULL, the parent and mapping MUST NOT be NULL, additionally such a node MUST NOT be the end point of a node sequence (ie: must be the 'parent' of another node).  This type of node can be useful for cases where the mapping defines the transform to an unspecified intermediate coordinate system, and enables a more efficient and compact structure for the TransformSet by forming a node at this intermediate coordinate system which can serve as the parent for multiple subsequent nodes.  </description>
+    <reference>
+      <vodml-id>TransNode.parent</vodml-id>
+      <name>parent</name>
+      <description>This identifies the source coordinate system node.  The associated mapping describes the transformation from this parent system to the target system of this node.  Will be NULL for 'root' nodes.</description>
+      <datatype>
+        <vodml-ref>trans:TransNode</vodml-ref>
+      </datatype>
+      <multiplicity>
+        <minOccurs>0</minOccurs>
+        <maxOccurs>1</maxOccurs>
+      </multiplicity>
+    </reference>
+    <reference>
+      <vodml-id>TransNode.target</vodml-id>
+      <name>target</name>
+      <description>This identifies the target coordinate system node.  It is the represenitive coordinate system for this node.  The associated mapping describes the transformation from the parent system of this node to this target system.  The coordinate systems themselves are described in the IVOA "Astronomical Coordinates and Coordinate Systems" model. 
+</description>
+      <datatype>
+        <vodml-ref>coords:CoordSys</vodml-ref>
+      </datatype>
+      <multiplicity>
+        <minOccurs>0</minOccurs>
+        <maxOccurs>1</maxOccurs>
+      </multiplicity>
+    </reference>
+    <reference>
+      <vodml-id>TransNode.mapping</vodml-id>
+      <name>mapping</name>
+      <description>This is a reference to the mapping relating the parent coordinate system to the target system.  Will be NULL for 'root' nodes.</description>
+      <datatype>
+        <vodml-ref>trans:Mapping</vodml-ref>
+      </datatype>
+      <multiplicity>
+        <minOccurs>0</minOccurs>
+        <maxOccurs>1</maxOccurs>
+      </multiplicity>
+    </reference>
+  </objectType>
+
+  <objectType>
+    <vodml-id>MapRef</vodml-id>
+    <name>MapRef</name>
+    <description>An entry in the CompountMap component mapping list.  Holds a reference to the component mapping.</description>
+    <reference>
+      <vodml-id>MapRef.ref</vodml-id>
+      <name>ref</name>
+      <description>Reference to the component Mapping.</description>
+      <datatype>
+        <vodml-ref>trans:Mapping</vodml-ref>
+      </datatype>
+      <multiplicity>
+        <minOccurs>1</minOccurs>
+        <maxOccurs>1</maxOccurs>
+      </multiplicity>
+    </reference>
+  </objectType>
+
+  <objectType>
+    <vodml-id>BiDirectionalMap</vodml-id>
+    <name>BiDirectionalMap</name>
+    <description>The BiDirectionalMap supports cases where one wants to explicitely define independent transforms for the forward and inverse operations.  This may be because a mapping does not have a analytical inverse, or dictated by the requirements of the application.  The associated mappings do not have to be of the same type.  The forward operation of the BiDirectionalMap is supported by the forward operation of the forwardMap, and the inverse operation of the BiDirectionalMap by the inverse operation of the inverseMap.  If the 'invert' flag is True, this is reversed so that the forward operation of the BiDirectionalMap is supported by the inverse operation of the inverseMap, and the inverse operation of the BiDirectionalMap by the forward operation of the forwardMap.</description>
+    <extends>
+      <vodml-ref>trans:Mapping</vodml-ref>
+    </extends>
+    <reference>
+      <vodml-id>BiDirectionalMap.inverseMap</vodml-id>
+      <name>inverseMap</name>
+      <description>The Mapping that defines the inverse operation of the BiDirectionalMap. The inverse operation of the target Mapping is used as the inverse operation of the BiDirectionalMap. If the inverse operation of the target Mapping is undefined, then the inverse operation of the BiDirectionalMap is also undefined. The forward operation of the target Mapping is never used and may be undefined.</description>
+      <datatype>
+        <vodml-ref>trans:Mapping</vodml-ref>
+      </datatype>
+      <multiplicity>
+        <minOccurs>1</minOccurs>
+        <maxOccurs>1</maxOccurs>
+      </multiplicity>
+    </reference>
+    <reference>
+      <vodml-id>BiDirectionalMap.forwardMap</vodml-id>
+      <name>forwardMap</name>
+      <description>The Mapping that defines the foward operation of the BiDirectionalMap. The forward operation of the target Mapping is used as the foward operation of the BiDirectionalMap. If the forward operation of the target Mapping is undefined, then the forward operation of the BiDirectionalMap is also undefined. The inverse operation of the target Mapping is never used and need not be defined.
+</description>
+      <datatype>
+        <vodml-ref>trans:Mapping</vodml-ref>
+      </datatype>
+      <multiplicity>
+        <minOccurs>1</minOccurs>
+        <maxOccurs>1</maxOccurs>
+      </multiplicity>
+    </reference>
+  </objectType>
+
+</vo-dml:model>

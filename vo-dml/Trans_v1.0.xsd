@@ -1,0 +1,1419 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema xmlns:vo-dml="http://www.ivoa.net/xml/VODML/v1"
+            xmlns:vodml-base="http://www.ivoa.net/xml/vo-dml/xsd/base/v0.1"
+            xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+            xmlns:trans="http://ivoa.net/dm/models/vo-dml/xsd/trans"
+            xmlns:ivoa="http://ivoa.net/dm/models/vo-dml/xsd/ivoa"
+            xmlns:coords="http://ivoa.net/dm/models/vo-dml/xsd/coords"
+            targetNamespace="http://ivoa.net/dm/models/vo-dml/xsd/trans">
+   <xsd:import namespace="http://www.ivoa.net/xml/vo-dml/xsd/base/v0.1"
+               schemaLocation="http://volute.g-vo.org/svn/trunk/projects/dm/vo-dml/xsd/vodml-base.xsd"/>
+   <xsd:import namespace="http://ivoa.net/dm/models/vo-dml/xsd/ivoa"
+               schemaLocation="http://volute.g-vo.org/svn/trunk/projects/dm/vo-dml/models/ivoa/vo-dml/IVOA.xsd"/>
+   <xsd:import namespace="http://ivoa.net/dm/models/vo-dml/xsd/coords"
+               schemaLocation="http://volute.g-vo.org/svn/trunk/projects/dm/STC/Coords/vo-dml/Coords_v1.0.xsd"/>
+   <xsd:complexType name="Mapping" abstract="true">
+      <xsd:annotation>
+         <xsd:documentation>The "Mapping" object defines how to transform a set of "input" scalar values into a corresponding set of "output" scalar values.   The Mapping supports transforms in either direction via "operations" which we refer to here as the forward and inverse operations.  The forward operation transforms the mapping inputs into mapping outputs.  The inverse operation transforms the mapping outputs into mapping inputs.  
+
+There is possibility here for confusion regarding the meaning of the words "input" and "output". A clear distinction should be drawn between the inputs and outputs of a mapping and those of an operation.  The inputs and outputs of a mapping are the same as the inputs and outputs of the mapping's forward operation, but are the reverse of the inputs and outputs of the mapping's inverse operation. Thus, the inputs of the inverse operation are the outputs of the mapping, etc.
+
+Note, a mapping may in principle be inverted, but an operation cannot be inverted.  Inverting a mapping means reversing the roles performed by its two operation - the original inverse operation is used as the new forward operation, and vice-versa.
+
+We could support both forward and inverse operations by defining entirely separate expressions to describe the two transformations.  However, that approach is bulky and requires more maintanence as any change to one object would require equivalent changes be made to the other.  Since many operations have a natural inverse, a safer, more compact and flexible approach is to use a single object to describe both transformations.  With this approach, a change to the one transform automatically applies to both directions.
+
+This model leverages this compact approach, defining mappings with sufficient information to support both forward and inverse operations.   Many mappings, such as shift, and rotation, have a natural inverse, and both operations can be supported by a single set of parameters.  Others, like polynomial, do not have a natural inverse, so one of the two operations may be undefined.  The BiDirectionalMap may be used to explicitely assign a different mapping for each direction.
+
+In this model, we describe three flavors of mappings which allow specifications from very simple relations to arbitrarily complex relations built from a set of component mappings:
+   * Atomic Mappings which perform a single arithmatic operation 
+   * BiDirectional Mapping with explicit specification of the mapping in the forward and inverse direction
+   * Compound Mappings which are used to control the workflow and build arbitrarily complex operations
+
+
+</xsd:documentation>
+         <xsd:appinfo>
+            <vodml-ref>trans:Mapping</vodml-ref>
+         </xsd:appinfo>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="vodml-base:VODMLObject">
+            <xsd:sequence>
+               <xsd:element name="invert" type="xsd:boolean" minOccurs="0" maxOccurs="1">
+                  <xsd:annotation>
+                     <xsd:documentation>Boolean flag indicates that the Mapping content defines its inverse operation rather than its forward operation and so the Mapping should be inverted before being used. In other words, the forward operation of the Mapping should be implemented using the inverse operation implied by the Mapping's contents, and  vice versa.
+
+For many operations, the inverse transformation can be directly derived from the forward transform.  For instance, the inverse of a transform that simply adds a constant to each input is a transform of the same type, with a negated constant.  However, there are potentially operations for which this cannot be done.  For instance, a transform that maps 3D Cartesian coodinates to spherical coordinates cannot be re-written to represent its inverse.  This flag indicates that it should be used in its inverse sense.  
+
+In addition, the invert flag allows a complex compound transformation to be be inverted simply by toggling its invert flag.  Without such a flag each component would need to be re-written to represent its inverse (if possible), and the order of serial transformations would need to be reversed - a much more complex and error prone process.
+</xsd:documentation>
+                     <xsd:appinfo>
+                        <vodml-ref>trans:Mapping.invert</vodml-ref>
+                     </xsd:appinfo>
+                  </xsd:annotation>
+               </xsd:element>
+            </xsd:sequence>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <xsd:complexType name="CompoundMap" abstract="true">
+      <xsd:annotation>
+         <xsd:documentation>Abstract class to facilitate the combination of Mappings in various ways.  Since they are themselves mappings, they can be used as a components in other compound mappings to create arbitrarily complex transform expressions.  
+</xsd:documentation>
+         <xsd:appinfo>
+            <vodml-ref>trans:CompoundMap</vodml-ref>
+         </xsd:appinfo>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="trans:Mapping">
+            <xsd:sequence>
+               <xsd:element name="cptMap" type="trans:MapRef" minOccurs="1" maxOccurs="unbounded"/>
+            </xsd:sequence>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <xsd:complexType name="ComposeMap">
+      <xsd:annotation>
+         <xsd:documentation>Combines the component mappings in series. This allows the building of multi-stage transforms such as a Matrix operation followed by a WCS Projection.  When the invert flag is 'True', the forward operation of the ComposeMap is defined by the inverse of the content, iterating the component list in reverse order, executing the inverse operation of each component.
+</xsd:documentation>
+         <xsd:appinfo>
+            <vodml-ref>trans:ComposeMap</vodml-ref>
+         </xsd:appinfo>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="trans:CompoundMap"/>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <xsd:complexType name="ConcatenateMap">
+      <xsd:annotation>
+         <xsd:documentation>Combines the component mappings in parallel. This enables the building of a mapping which covers the full dimension space of the input. Axes are distributed to the component mappings in order. For example, to perform a shift on a 2-dimensional coordinate (x,y), one would join two Shift maps giving the offset in x and y respectively. 
+When the 'invert' flag is True, the forward operation of the ConcatenateMap is defined by applying the inverse operations of the component mappings.</xsd:documentation>
+         <xsd:appinfo>
+            <vodml-ref>trans:ConcatenateMap</vodml-ref>
+         </xsd:appinfo>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="trans:CompoundMap"/>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <xsd:complexType name="Permute">
+      <xsd:annotation>
+         <xsd:documentation>Permute the order and possibly number of dimensions between operations. This operation facilitates the workflow through the operation sequence. It is comprised of an ordered axismap list defining the output axis sequence in terms of the source (input) axes. It supports the reorder, duplication, and dropping of dimensions. 
+   Reorder Example: We have a 3-dimensional coordinate (x,y,z) and wish to perform a 2-dimensional transform on the (x,z) plane. Define a Permute operation to reorder the axes from (x,y,z) to (y,x,z) using an axismap list specifying the new axis order, [2,1,3]. The results feed into the next step ( 1D + 2D operations ). 
+   Duplicate Example: We have 2-dimensional coordinate (x,y) feeding two Polynomial2D operations to form (x',y'). Define a Permute operation with axismap list specifying sourceAxis set [1,2,1,2]. The result feeds into the next step ( Polynomial2D + Polynomial2D operations). 
+   Drop Example: We have a 5-dimensional input feeding into a 3x3 Matrix operation. Define a Permute operation selecting the relevant axis set [1,3,5], the remaining axes, [2,4], are dropped. 
+   Add Example: We have a 2-dimensional operation feeding into axes [1,3] of a 3-dimensional operation. Define a Permute operation with numSourceAxes=2; and sourceAxis set [1,0,2] where output axis 2 also specifies the fixed seed value.
+</xsd:documentation>
+         <xsd:appinfo>
+            <vodml-ref>trans:Permute</vodml-ref>
+         </xsd:appinfo>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="trans:Mapping">
+            <xsd:sequence>
+               <xsd:element name="numSourceAxes" type="xsd:nonNegativeInteger" minOccurs="1" maxOccurs="1">
+                  <xsd:annotation>
+                     <xsd:documentation>The number of input axes. Used to verify dimensional coverage in forward and inverse directions. For example, numSourceAxes=4 with axismap=[1,3] indicates that axes [2,4] have been dropped.
+</xsd:documentation>
+                     <xsd:appinfo>
+                        <vodml-ref>trans:Permute.numSourceAxes</vodml-ref>
+                     </xsd:appinfo>
+                  </xsd:annotation>
+               </xsd:element>
+               <xsd:element name="axismap" type="trans:PermuteAxis" minOccurs="0" maxOccurs="unbounded"/>
+            </xsd:sequence>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <xsd:complexType name="PermuteAxis">
+      <xsd:annotation>
+         <xsd:documentation>Entry for the Permute operation, this object defines the mapping of input dimension to output dimension.  The output dimension is determined from its order in the axismap list.</xsd:documentation>
+         <xsd:appinfo>
+            <vodml-ref>trans:PermuteAxis</vodml-ref>
+         </xsd:appinfo>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="vodml-base:VODMLObject">
+            <xsd:sequence>
+               <xsd:element name="sourceAxis" type="xsd:nonNegativeInteger" minOccurs="1" maxOccurs="1">
+                  <xsd:annotation>
+                     <xsd:documentation>Source (input) dimension number, 1 based.</xsd:documentation>
+                     <xsd:appinfo>
+                        <vodml-ref>trans:PermuteAxis.sourceAxis</vodml-ref>
+                     </xsd:appinfo>
+                  </xsd:annotation>
+               </xsd:element>
+               <xsd:element name="seedValue" type="xsd:float" minOccurs="0" maxOccurs="1">
+                  <xsd:annotation>
+                     <xsd:documentation>Value to assign for the new dimensional axis.</xsd:documentation>
+                     <xsd:appinfo>
+                        <vodml-ref>trans:PermuteAxis.seedValue</vodml-ref>
+                     </xsd:appinfo>
+                  </xsd:annotation>
+               </xsd:element>
+            </xsd:sequence>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <xsd:complexType name="Unit">
+      <xsd:annotation>
+         <xsd:documentation>A 1-Dimensional operation which makes no change to the inputs. ( X' = X )
+</xsd:documentation>
+         <xsd:appinfo>
+            <vodml-ref>trans:Unit</vodml-ref>
+         </xsd:appinfo>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="trans:Mapping"/>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <xsd:complexType name="Shift">
+      <xsd:annotation>
+         <xsd:documentation>A 1-Dimensional operation defining a simple offset. ( X' = X + offset )
+</xsd:documentation>
+         <xsd:appinfo>
+            <vodml-ref>trans:Shift</vodml-ref>
+         </xsd:appinfo>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="trans:Mapping">
+            <xsd:sequence>
+               <xsd:element name="offset" type="xsd:float" minOccurs="1" maxOccurs="1">
+                  <xsd:annotation>
+                     <xsd:documentation>The amount of offset to apply.
+</xsd:documentation>
+                     <xsd:appinfo>
+                        <vodml-ref>trans:Shift.offset</vodml-ref>
+                     </xsd:appinfo>
+                  </xsd:annotation>
+               </xsd:element>
+            </xsd:sequence>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <xsd:complexType name="Scale">
+      <xsd:annotation>
+         <xsd:documentation>A 1-Dimensional operator for simple scaling. ( X' = factor*X )
+</xsd:documentation>
+         <xsd:appinfo>
+            <vodml-ref>trans:Scale</vodml-ref>
+         </xsd:appinfo>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="trans:Mapping">
+            <xsd:sequence>
+               <xsd:element name="factor" type="xsd:float" minOccurs="1" maxOccurs="1">
+                  <xsd:annotation>
+                     <xsd:documentation>The scale factor.
+</xsd:documentation>
+                     <xsd:appinfo>
+                        <vodml-ref>trans:Scale.factor</vodml-ref>
+                     </xsd:appinfo>
+                  </xsd:annotation>
+               </xsd:element>
+            </xsd:sequence>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <xsd:complexType name="Rotate2D">
+      <xsd:annotation>
+         <xsd:documentation>A 2-Dimensional rotation operation.
+</xsd:documentation>
+         <xsd:appinfo>
+            <vodml-ref>trans:Rotate2D</vodml-ref>
+         </xsd:appinfo>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="trans:Mapping">
+            <xsd:sequence>
+               <xsd:element name="angle" type="xsd:float" minOccurs="1" maxOccurs="1">
+                  <xsd:annotation>
+                     <xsd:documentation>Rotation angle, in degrees, from the positive direction of axis 1 toward the positive direction of axis 2.
+</xsd:documentation>
+                     <xsd:appinfo>
+                        <vodml-ref>trans:Rotate2D.angle</vodml-ref>
+                     </xsd:appinfo>
+                  </xsd:annotation>
+               </xsd:element>
+            </xsd:sequence>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <xsd:complexType name="EulerRotation">
+      <xsd:annotation>
+         <xsd:documentation>Defines a rotation operation in a 3-dimensional cartesian coordinate space, defined as a series of rotations about the native axes (x,y,z).
+</xsd:documentation>
+         <xsd:appinfo>
+            <vodml-ref>trans:EulerRotation</vodml-ref>
+         </xsd:appinfo>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="trans:Mapping">
+            <xsd:sequence>
+               <xsd:element name="eulerAngle" type="trans:EulerAngle" minOccurs="1" maxOccurs="unbounded"/>
+            </xsd:sequence>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <xsd:complexType name="EulerAngle">
+      <xsd:annotation>
+         <xsd:documentation>Angular rotation about a particular axis of a 3-dimensional cartesian coordinate space.
+</xsd:documentation>
+         <xsd:appinfo>
+            <vodml-ref>trans:EulerAngle</vodml-ref>
+         </xsd:appinfo>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="vodml-base:VODMLObject">
+            <xsd:sequence>
+               <xsd:element name="rotationAxis" type="xsd:string" minOccurs="1" maxOccurs="1">
+                  <xsd:annotation>
+                     <xsd:documentation>Identifies the axis of rotation. MUST be 'x', 'y', or 'z'
+</xsd:documentation>
+                     <xsd:appinfo>
+                        <vodml-ref>trans:EulerAngle.rotationAxis</vodml-ref>
+                     </xsd:appinfo>
+                  </xsd:annotation>
+               </xsd:element>
+               <xsd:element name="angle" type="xsd:float" minOccurs="1" maxOccurs="1">
+                  <xsd:annotation>
+                     <xsd:documentation>Angle of rotation, in degrees. Angle sign follows the right-hand rule, where positive values indicate clockwise rotation (looking in +axis direction), negative values for counter-clockwise.
+</xsd:documentation>
+                     <xsd:appinfo>
+                        <vodml-ref>trans:EulerAngle.angle</vodml-ref>
+                     </xsd:appinfo>
+                  </xsd:annotation>
+               </xsd:element>
+            </xsd:sequence>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <xsd:complexType name="Matrix">
+      <xsd:annotation>
+         <xsd:documentation>An M x N matrix operation. Each cell of the matrix is provided by a MatrixElement object. Missing elements should be considered to equal 0.
+</xsd:documentation>
+         <xsd:appinfo>
+            <vodml-ref>trans:Matrix</vodml-ref>
+         </xsd:appinfo>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="trans:Mapping">
+            <xsd:sequence>
+               <xsd:element name="M" type="xsd:nonNegativeInteger" minOccurs="1" maxOccurs="1">
+                  <xsd:annotation>
+                     <xsd:documentation>Number of rows in the matrix.
+</xsd:documentation>
+                     <xsd:appinfo>
+                        <vodml-ref>trans:Matrix.M</vodml-ref>
+                     </xsd:appinfo>
+                  </xsd:annotation>
+               </xsd:element>
+               <xsd:element name="N" type="xsd:nonNegativeInteger" minOccurs="1" maxOccurs="1">
+                  <xsd:annotation>
+                     <xsd:documentation>Number of columns in the matrix.
+</xsd:documentation>
+                     <xsd:appinfo>
+                        <vodml-ref>trans:Matrix.N</vodml-ref>
+                     </xsd:appinfo>
+                  </xsd:annotation>
+               </xsd:element>
+               <xsd:element name="element" type="trans:MatrixElement" minOccurs="0" maxOccurs="unbounded"/>
+            </xsd:sequence>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <xsd:complexType name="MatrixElement">
+      <xsd:annotation>
+         <xsd:documentation>The value of cell m,n in an M x N matrix.
+</xsd:documentation>
+         <xsd:appinfo>
+            <vodml-ref>trans:MatrixElement</vodml-ref>
+         </xsd:appinfo>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="vodml-base:VODMLObject">
+            <xsd:sequence>
+               <xsd:element name="m" type="xsd:nonNegativeInteger" minOccurs="1" maxOccurs="1">
+                  <xsd:annotation>
+                     <xsd:documentation>Matrix cell row number.
+</xsd:documentation>
+                     <xsd:appinfo>
+                        <vodml-ref>trans:MatrixElement.m</vodml-ref>
+                     </xsd:appinfo>
+                  </xsd:annotation>
+               </xsd:element>
+               <xsd:element name="n" type="xsd:nonNegativeInteger" minOccurs="1" maxOccurs="1">
+                  <xsd:annotation>
+                     <xsd:documentation>Matrix cell column number.
+</xsd:documentation>
+                     <xsd:appinfo>
+                        <vodml-ref>trans:MatrixElement.n</vodml-ref>
+                     </xsd:appinfo>
+                  </xsd:annotation>
+               </xsd:element>
+               <xsd:element name="value" type="xsd:float" minOccurs="1" maxOccurs="1">
+                  <xsd:annotation>
+                     <xsd:documentation>Matrix cell value.
+</xsd:documentation>
+                     <xsd:appinfo>
+                        <vodml-ref>trans:MatrixElement.value</vodml-ref>
+                     </xsd:appinfo>
+                  </xsd:annotation>
+               </xsd:element>
+            </xsd:sequence>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <xsd:complexType name="Projection" abstract="true">
+      <xsd:annotation>
+         <xsd:documentation>Abstract head of World Coordinate System (WCS) projection operations. We do not attempt to define the operations here, but instead, provide extensions which support the transforms described in the FITS WCS papers II and III.
+</xsd:documentation>
+         <xsd:appinfo>
+            <vodml-ref>trans:Projection</vodml-ref>
+         </xsd:appinfo>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="trans:Mapping">
+            <xsd:sequence>
+               <xsd:element name="param" type="trans:ProjectionParam" minOccurs="0" maxOccurs="unbounded"/>
+            </xsd:sequence>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <xsd:complexType name="ProjectionParam">
+      <xsd:annotation>
+         <xsd:documentation>Simple parameter specification for WCS Projections. The parameter is modeled as a simple name/value pair. The details of expectations for the various projection algorithms is left to the WCS paper describing the algorithm.
+</xsd:documentation>
+         <xsd:appinfo>
+            <vodml-ref>trans:ProjectionParam</vodml-ref>
+         </xsd:appinfo>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="vodml-base:VODMLObject">
+            <xsd:sequence>
+               <xsd:element name="name" type="xsd:string" minOccurs="1" maxOccurs="1">
+                  <xsd:annotation>
+                     <xsd:documentation>The parameter name as described in the WCS papers for each operation type.
+</xsd:documentation>
+                     <xsd:appinfo>
+                        <vodml-ref>trans:ProjectionParam.name</vodml-ref>
+                     </xsd:appinfo>
+                  </xsd:annotation>
+               </xsd:element>
+               <xsd:element name="value" type="xsd:float" minOccurs="1" maxOccurs="1">
+                  <xsd:annotation>
+                     <xsd:documentation>The value for the parameter.
+</xsd:documentation>
+                     <xsd:appinfo>
+                        <vodml-ref>trans:ProjectionParam.value</vodml-ref>
+                     </xsd:appinfo>
+                  </xsd:annotation>
+               </xsd:element>
+            </xsd:sequence>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <xsd:complexType name="SkyProjection">
+      <xsd:annotation>
+         <xsd:documentation>This class corresponds to the Spherical Projection component of the FITS WCS paper II. As in the paper, this operation describes the mapping from the intermediate &amp;quot;Projection Plane&amp;quot; to the &amp;quot;Native Spherical&amp;quot; coordinate system. This model supports all defined projection types, where the appropriate code is specified in the algorithm attribute. All projection parameters are to be provided through the ProjectionParam list according to the descriptions given in the FITS WCS paper.
+</xsd:documentation>
+         <xsd:appinfo>
+            <vodml-ref>trans:SkyProjection</vodml-ref>
+         </xsd:appinfo>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="trans:Projection">
+            <xsd:sequence>
+               <xsd:element name="algorithm" type="trans:SkyProjectionType" minOccurs="1" maxOccurs="1">
+                  <xsd:annotation>
+                     <xsd:documentation>The projection algorithm to apply. The value MUST be taken from the enumeration of standard sky projection algorithms. Extracted from &amp;#39;ctype&amp;#39; in the FITS WCS representations.
+</xsd:documentation>
+                     <xsd:appinfo>
+                        <vodml-ref>trans:SkyProjection.algorithm</vodml-ref>
+                     </xsd:appinfo>
+                  </xsd:annotation>
+               </xsd:element>
+            </xsd:sequence>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <xsd:complexType name="SkyProjRotate">
+      <xsd:annotation>
+         <xsd:documentation>This class extends SkyProjection to include the Spherical Rotation component of the FITS WCS paper II. This operation describes the mapping from the "Native Spherical" coordinate system to the "Celestial" coordinate system. The reference values are provided at the appropriate attribute, while all other parameters (e.g. LONPOLE, LATPOLE) are to be provided through the ProjectionParam list according to the descriptions given in the FITS WCS paper.
+</xsd:documentation>
+         <xsd:appinfo>
+            <vodml-ref>trans:SkyProjRotate</vodml-ref>
+         </xsd:appinfo>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="trans:SkyProjection">
+            <xsd:sequence>
+               <xsd:element name="referenceValue" type="xsd:float" minOccurs="2" maxOccurs="2">
+                  <xsd:annotation>
+                     <xsd:documentation>The target reference values in each dimension. Equivalent to 'crval' in FITS WCS representations.
+</xsd:documentation>
+                     <xsd:appinfo>
+                        <vodml-ref>trans:SkyProjRotate.referenceValue</vodml-ref>
+                     </xsd:appinfo>
+                  </xsd:annotation>
+               </xsd:element>
+            </xsd:sequence>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <xsd:complexType name="SpectralProjection">
+      <xsd:annotation>
+         <xsd:documentation>This class represents a nonlinear one-dimensional spectral transform as detailed in the FITS WCS paper III.
+</xsd:documentation>
+         <xsd:appinfo>
+            <vodml-ref>trans:SpectralProjection</vodml-ref>
+         </xsd:appinfo>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="trans:Projection">
+            <xsd:sequence>
+               <xsd:element name="referenceValue" type="xsd:float" minOccurs="1" maxOccurs="1">
+                  <xsd:annotation>
+                     <xsd:documentation>The target reference value for the axis. Equivalent to 'crval' in FITS WCS representations.</xsd:documentation>
+                     <xsd:appinfo>
+                        <vodml-ref>trans:SpectralProjection.referenceValue</vodml-ref>
+                     </xsd:appinfo>
+                  </xsd:annotation>
+               </xsd:element>
+               <xsd:element name="algorithm" type="trans:SpectralProjectionType" minOccurs="1"
+                            maxOccurs="1">
+                  <xsd:annotation>
+                     <xsd:documentation>The projection algorithm to apply. The value MUST be taken from the enumeration of non-linear spectral projection algorithms. Extracted from 'ctype' in FITS WCS representations.
+</xsd:documentation>
+                     <xsd:appinfo>
+                        <vodml-ref>trans:SpectralProjection.algorithm</vodml-ref>
+                     </xsd:appinfo>
+                  </xsd:annotation>
+               </xsd:element>
+               <xsd:element name="coordType" type="trans:SpectralCoordType" minOccurs="1" maxOccurs="1">
+                  <xsd:annotation>
+                     <xsd:documentation>The resulting spectral coordinate type code. Values MUST be taken from the enumerated list of spectral coordinate types. Extracted from 'ctype' in FITS WCS representations.
+</xsd:documentation>
+                     <xsd:appinfo>
+                        <vodml-ref>trans:SpectralProjection.coordType</vodml-ref>
+                     </xsd:appinfo>
+                  </xsd:annotation>
+               </xsd:element>
+            </xsd:sequence>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <xsd:complexType name="Polynomial" abstract="true">
+      <xsd:annotation>
+         <xsd:documentation>Abstract head of a family of Polynomial distortion operations.</xsd:documentation>
+         <xsd:appinfo>
+            <vodml-ref>trans:Polynomial</vodml-ref>
+         </xsd:appinfo>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="trans:Mapping">
+            <xsd:sequence>
+               <xsd:element name="order" type="xsd:nonNegativeInteger" minOccurs="1" maxOccurs="1">
+                  <xsd:annotation>
+                     <xsd:documentation>The order, or degree, of the polynomial expression.
+</xsd:documentation>
+                     <xsd:appinfo>
+                        <vodml-ref>trans:Polynomial.order</vodml-ref>
+                     </xsd:appinfo>
+                  </xsd:annotation>
+               </xsd:element>
+            </xsd:sequence>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <xsd:complexType name="Polynomial1D">
+      <xsd:annotation>
+         <xsd:documentation>A 1-Dimensional Polynomial transform represented by the expression: X' = SUM( Ci*X**i), i=0..order. Each term is provided by a PolyCoeff1D object. Missing terms are considered to have a coefficient of 0.0.</xsd:documentation>
+         <xsd:appinfo>
+            <vodml-ref>trans:Polynomial1D</vodml-ref>
+         </xsd:appinfo>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="trans:Polynomial">
+            <xsd:sequence>
+               <xsd:element name="term" type="trans:PolyCoeff1D" minOccurs="1" maxOccurs="unbounded"/>
+            </xsd:sequence>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <xsd:complexType name="PolyCoeff1D">
+      <xsd:annotation>
+         <xsd:documentation>A term of the polynomial expression. This object provides the coefficient (c) and power (p) of the term, forming the expression c*X**p.
+</xsd:documentation>
+         <xsd:appinfo>
+            <vodml-ref>trans:PolyCoeff1D</vodml-ref>
+         </xsd:appinfo>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="vodml-base:VODMLObject">
+            <xsd:sequence>
+               <xsd:element name="coeff" type="xsd:float" minOccurs="1" maxOccurs="1">
+                  <xsd:annotation>
+                     <xsd:documentation>Multiplicitive coefficient of the term.
+</xsd:documentation>
+                     <xsd:appinfo>
+                        <vodml-ref>trans:PolyCoeff1D.coeff</vodml-ref>
+                     </xsd:appinfo>
+                  </xsd:annotation>
+               </xsd:element>
+               <xsd:element name="power" type="xsd:nonNegativeInteger" minOccurs="1" maxOccurs="1">
+                  <xsd:annotation>
+                     <xsd:documentation>The power to raise the value for this term.
+</xsd:documentation>
+                     <xsd:appinfo>
+                        <vodml-ref>trans:PolyCoeff1D.power</vodml-ref>
+                     </xsd:appinfo>
+                  </xsd:annotation>
+               </xsd:element>
+            </xsd:sequence>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <xsd:complexType name="Polynomial2D">
+      <xsd:annotation>
+         <xsd:documentation>A 2-Dimensional Polynomial transform represented by the expression: X' = SUMi,j( Cij*X**i*Y**j), i+j&lt;=order. Each term is provided by a PolyCoeff2D object. Missing terms are considered to have a coefficient of 0.0.
+</xsd:documentation>
+         <xsd:appinfo>
+            <vodml-ref>trans:Polynomial2D</vodml-ref>
+         </xsd:appinfo>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="trans:Polynomial">
+            <xsd:sequence>
+               <xsd:element name="term" type="trans:PolyCoeff2D" minOccurs="1" maxOccurs="unbounded"/>
+            </xsd:sequence>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <xsd:complexType name="PolyCoeff2D">
+      <xsd:annotation>
+         <xsd:documentation>A term of the polynomial expression. This object provides the coefficient (c) and power (p) of the term, forming the expression c*X**p[0]*Y**p[1].</xsd:documentation>
+         <xsd:appinfo>
+            <vodml-ref>trans:PolyCoeff2D</vodml-ref>
+         </xsd:appinfo>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="vodml-base:VODMLObject">
+            <xsd:sequence>
+               <xsd:element name="coeff" type="xsd:float" minOccurs="1" maxOccurs="1">
+                  <xsd:annotation>
+                     <xsd:documentation>Multiplicitive coefficient of the term.
+</xsd:documentation>
+                     <xsd:appinfo>
+                        <vodml-ref>trans:PolyCoeff2D.coeff</vodml-ref>
+                     </xsd:appinfo>
+                  </xsd:annotation>
+               </xsd:element>
+               <xsd:element name="power" type="xsd:nonNegativeInteger" minOccurs="2" maxOccurs="2">
+                  <xsd:annotation>
+                     <xsd:documentation>The power to raise the values for this term in each dimension.
+</xsd:documentation>
+                     <xsd:appinfo>
+                        <vodml-ref>trans:PolyCoeff2D.power</vodml-ref>
+                     </xsd:appinfo>
+                  </xsd:annotation>
+               </xsd:element>
+            </xsd:sequence>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <xsd:complexType name="Lookup">
+      <xsd:annotation>
+         <xsd:documentation>Defines a lookup table operation. The Lookup is comprised of a series of value pairs (LookupEntry). All members of the series MUST be of the same type. Handling Enumerated data: A common usage of a Lookup operation is to map image pixel index to an enumeration, such as a Polarization state. This can be handled by two means: 1) Define a numeric equivalent for each enumeration literal, and use NumericEntry types. Casting to the corresponding literal occurs outside of the operation. 2) Your local model can define a LookupEntry extension which maps the native value directly the target EnumerationLiteral. The details of either approach for particular enumerations is considered outside the scope of this document.
+</xsd:documentation>
+         <xsd:appinfo>
+            <vodml-ref>trans:Lookup</vodml-ref>
+         </xsd:appinfo>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="trans:Mapping">
+            <xsd:sequence>
+               <xsd:element name="interpolation" type="trans:InterpolationMethod" minOccurs="0"
+                            maxOccurs="1">
+                  <xsd:annotation>
+                     <xsd:documentation>Specifies the form of interpolation, if any, prescribed to be performed.
+</xsd:documentation>
+                     <xsd:appinfo>
+                        <vodml-ref>trans:Lookup.interpolation</vodml-ref>
+                     </xsd:appinfo>
+                  </xsd:annotation>
+               </xsd:element>
+               <xsd:element name="bounds_error" type="xsd:boolean" minOccurs="0" maxOccurs="1">
+                  <xsd:annotation>
+                     <xsd:documentation>Flag to specify behaviour outside the lookup table data bounds. True indicates an error condition, False indicates that the associated "fill" entry should be returned. If no "fill" entry is provided, the value should be extrapolated.
+</xsd:documentation>
+                     <xsd:appinfo>
+                        <vodml-ref>trans:Lookup.bounds_error</vodml-ref>
+                     </xsd:appinfo>
+                  </xsd:annotation>
+               </xsd:element>
+               <xsd:element name="entry" type="trans:LookupEntry" minOccurs="1" maxOccurs="unbounded"/>
+            </xsd:sequence>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <xsd:complexType name="LookupEntry" abstract="true">
+      <xsd:annotation>
+         <xsd:documentation>This is an abstract head of lookup table entry objects. Each entry provides a discrete translation of a 'native' value to the corresponding 'target' value.
+</xsd:documentation>
+         <xsd:appinfo>
+            <vodml-ref>trans:LookupEntry</vodml-ref>
+         </xsd:appinfo>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="vodml-base:VODMLObject">
+            <xsd:sequence>
+               <xsd:element name="fill" type="xsd:boolean" minOccurs="0" maxOccurs="1">
+                  <xsd:annotation>
+                     <xsd:documentation>When TRUE, the entry provides values to be used outside the Lookup table data domain. MUST only appear first or last in the sequence. If missing, it is considered to be FALSE.
+</xsd:documentation>
+                     <xsd:appinfo>
+                        <vodml-ref>trans:LookupEntry.fill</vodml-ref>
+                     </xsd:appinfo>
+                  </xsd:annotation>
+               </xsd:element>
+            </xsd:sequence>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <xsd:complexType name="NumericEntry">
+      <xsd:annotation>
+         <xsd:documentation>A 1-Dimensional discrete mapping of numeric values.</xsd:documentation>
+         <xsd:appinfo>
+            <vodml-ref>trans:NumericEntry</vodml-ref>
+         </xsd:appinfo>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="trans:LookupEntry">
+            <xsd:sequence>
+               <xsd:element name="nativeValue" type="xsd:float" minOccurs="1" maxOccurs="1">
+                  <xsd:annotation>
+                     <xsd:documentation>The native, or reference, value of the lookup entry.</xsd:documentation>
+                     <xsd:appinfo>
+                        <vodml-ref>trans:NumericEntry.nativeValue</vodml-ref>
+                     </xsd:appinfo>
+                  </xsd:annotation>
+               </xsd:element>
+               <xsd:element name="targetValue" type="xsd:float" minOccurs="1" maxOccurs="1">
+                  <xsd:annotation>
+                     <xsd:documentation>The target, or resulting, value of the lookup entry.
+</xsd:documentation>
+                     <xsd:appinfo>
+                        <vodml-ref>trans:NumericEntry.targetValue</vodml-ref>
+                     </xsd:appinfo>
+                  </xsd:annotation>
+               </xsd:element>
+            </xsd:sequence>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <xsd:complexType name="NumericEntry2D">
+      <xsd:annotation>
+         <xsd:documentation>A 2-Dimensional discrete mapping of numeric values.
+</xsd:documentation>
+         <xsd:appinfo>
+            <vodml-ref>trans:NumericEntry2D</vodml-ref>
+         </xsd:appinfo>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="trans:LookupEntry">
+            <xsd:sequence>
+               <xsd:element name="nativeValue" type="xsd:float" minOccurs="2" maxOccurs="2">
+                  <xsd:annotation>
+                     <xsd:documentation>The native, or reference, value of the lookup entry.
+</xsd:documentation>
+                     <xsd:appinfo>
+                        <vodml-ref>trans:NumericEntry2D.nativeValue</vodml-ref>
+                     </xsd:appinfo>
+                  </xsd:annotation>
+               </xsd:element>
+               <xsd:element name="targetValue" type="xsd:float" minOccurs="2" maxOccurs="2">
+                  <xsd:annotation>
+                     <xsd:documentation>The target, or resulting, value of the lookup entry.
+</xsd:documentation>
+                     <xsd:appinfo>
+                        <vodml-ref>trans:NumericEntry2D.targetValue</vodml-ref>
+                     </xsd:appinfo>
+                  </xsd:annotation>
+               </xsd:element>
+            </xsd:sequence>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <xsd:complexType name="StringEntry">
+      <xsd:annotation>
+         <xsd:documentation>A 1-Dimensional discrete mapping of an integer counter to a corresponding string form. Since the result is non-numeric, a Lookup operation with StringEntry-s can only be used at the end of a Transform sequence.
+</xsd:documentation>
+         <xsd:appinfo>
+            <vodml-ref>trans:StringEntry</vodml-ref>
+         </xsd:appinfo>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="trans:LookupEntry">
+            <xsd:sequence>
+               <xsd:element name="nativeValue" type="xsd:int" minOccurs="1" maxOccurs="1">
+                  <xsd:annotation>
+                     <xsd:documentation>The native, or reference, value of the lookup entry.
+</xsd:documentation>
+                     <xsd:appinfo>
+                        <vodml-ref>trans:StringEntry.nativeValue</vodml-ref>
+                     </xsd:appinfo>
+                  </xsd:annotation>
+               </xsd:element>
+               <xsd:element name="targetValue" type="xsd:string" minOccurs="1" maxOccurs="1">
+                  <xsd:annotation>
+                     <xsd:documentation>The target, or resulting, value of the lookup entry.</xsd:documentation>
+                     <xsd:appinfo>
+                        <vodml-ref>trans:StringEntry.targetValue</vodml-ref>
+                     </xsd:appinfo>
+                  </xsd:annotation>
+               </xsd:element>
+            </xsd:sequence>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <xsd:complexType name="TransformSet">
+      <xsd:annotation>
+         <xsd:documentation>TransformSet supports the relation of coordinate systems via Mappings.  The design is such that it supports the relation of collections of related coordinates systems by the various mappings between them.  
+
+A single TransformSet can relate a tree of spatial coordinate systems, individual TransNodes can be used as the parent for multiple branches.  For example:
+  * pixel - chip - tiled detector - detector - tangent plane
+  * chip - chip physical
+  * detector - mirror spherical
+  * tangent plane - celestial
+
+Each transition is encapsulated by a TransNode instance linking the parent coordinate system to the target coordinate system (that of the TransNode) with a Mapping (from the parent to target systems).  
+A simple transform from system A to system B requires two TransNodes, one describing system A (with no Mapping), and another describing system B with the Mapping from A to B.
+</xsd:documentation>
+         <xsd:appinfo>
+            <vodml-ref>trans:TransformSet</vodml-ref>
+         </xsd:appinfo>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="vodml-base:VODMLObject">
+            <xsd:sequence>
+               <xsd:element name="node" type="trans:TransNode" minOccurs="1" maxOccurs="unbounded"/>
+            </xsd:sequence>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <xsd:complexType name="TransNode">
+      <xsd:annotation>
+         <xsd:documentation>TransNode is a container object relating a parent coordinate system and a target coordinate system (that of the node) with the mapping relation between them.  The associated Mapping MUST be constructed such that the mapping inputs correspond to the parent coordinate system and the mapping outputs to the target coordinate system.
+
+If either the parent node or mapping is NULL, the other MUST also be NULL.  This forms a 'root' node, containing only the target coordinate system, and serves as an origination node in the TransformSet.
+
+If the target is NULL, the parent and mapping MUST NOT be NULL, additionally such a node MUST NOT be the end point of a node sequence (ie: must be the 'parent' of another node).  This type of node can be useful for cases where the mapping defines the transform to an unspecified intermediate coordinate system, and enables a more efficient and compact structure for the TransformSet by forming a node at this intermediate coordinate system which can serve as the parent for multiple subsequent nodes.  </xsd:documentation>
+         <xsd:appinfo>
+            <vodml-ref>trans:TransNode</vodml-ref>
+         </xsd:appinfo>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="vodml-base:VODMLObject">
+            <xsd:sequence>
+               <xsd:element name="parent" type="vodml-base:VODMLReference" minOccurs="0" maxOccurs="1">
+                  <xsd:annotation>
+                     <xsd:documentation>This identifies the source coordinate system node.  The associated mapping describes the transformation from this parent system to the target system of this node.  Will be NULL for 'root' nodes.</xsd:documentation>
+                     <xsd:appinfo>
+                        <vodml-ref>trans:TransNode.parent</vodml-ref>
+                     </xsd:appinfo>
+                  </xsd:annotation>
+               </xsd:element>
+               <xsd:element name="target" type="vodml-base:VODMLReference" minOccurs="0" maxOccurs="1">
+                  <xsd:annotation>
+                     <xsd:documentation>This identifies the target coordinate system node.  It is the represenitive coordinate system for this node.  The associated mapping describes the transformation from the parent system of this node to this target system.  The coordinate systems themselves are described in the IVOA "Astronomical Coordinates and Coordinate Systems" model. 
+</xsd:documentation>
+                     <xsd:appinfo>
+                        <vodml-ref>trans:TransNode.target</vodml-ref>
+                     </xsd:appinfo>
+                  </xsd:annotation>
+               </xsd:element>
+               <xsd:element name="mapping" type="vodml-base:VODMLReference" minOccurs="0" maxOccurs="1">
+                  <xsd:annotation>
+                     <xsd:documentation>This is a reference to the mapping relating the parent coordinate system to the target system.  Will be NULL for 'root' nodes.</xsd:documentation>
+                     <xsd:appinfo>
+                        <vodml-ref>trans:TransNode.mapping</vodml-ref>
+                     </xsd:appinfo>
+                  </xsd:annotation>
+               </xsd:element>
+            </xsd:sequence>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <xsd:complexType name="MapRef">
+      <xsd:annotation>
+         <xsd:documentation>An entry in the CompountMap component mapping list.  Holds a reference to the component mapping.</xsd:documentation>
+         <xsd:appinfo>
+            <vodml-ref>trans:MapRef</vodml-ref>
+         </xsd:appinfo>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="vodml-base:VODMLObject">
+            <xsd:sequence>
+               <xsd:element name="ref" type="vodml-base:VODMLReference" minOccurs="1" maxOccurs="1">
+                  <xsd:annotation>
+                     <xsd:documentation>Reference to the component Mapping.</xsd:documentation>
+                     <xsd:appinfo>
+                        <vodml-ref>trans:MapRef.ref</vodml-ref>
+                     </xsd:appinfo>
+                  </xsd:annotation>
+               </xsd:element>
+            </xsd:sequence>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <xsd:complexType name="BiDirectionalMap">
+      <xsd:annotation>
+         <xsd:documentation>The BiDirectionalMap supports cases where one wants to explicitely define independent transforms for the forward and inverse operations.  This may be because a mapping does not have a natural inverse, or dictated by the requirements of the application.  The associated mappings do not have to be of the same type.  The forward operation of the BiDirectionalMap is supported by the forward operation of the forwardMap, and the inverse operation of the BiDirectionalMap by the inverse operation of the inverseMap.  If the 'invert' flag is True, this is reversed so that the forward operation of the BiDirectionalMap is supported by the inverse operation of the inverseMap, and the inverse operation of the BiDirectionalMap by the forward operation of the forwardMap.</xsd:documentation>
+         <xsd:appinfo>
+            <vodml-ref>trans:BiDirectionalMap</vodml-ref>
+         </xsd:appinfo>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="trans:Mapping">
+            <xsd:sequence>
+               <xsd:element name="inverseMap" type="vodml-base:VODMLReference" minOccurs="1" maxOccurs="1">
+                  <xsd:annotation>
+                     <xsd:documentation>The Mapping that defines the inverse operation of the BiDirectionalMap. The inverse operation of the target Mapping is used as the inverse operation of the BiDirectionalMap. If the inverse operation of the target Mapping is undefined, then the inverse operation of the BiDirectionalMap is also undefined. The forward operation of the target Mapping is never used and may be undefined.</xsd:documentation>
+                     <xsd:appinfo>
+                        <vodml-ref>trans:BiDirectionalMap.inverseMap</vodml-ref>
+                     </xsd:appinfo>
+                  </xsd:annotation>
+               </xsd:element>
+               <xsd:element name="forwardMap" type="vodml-base:VODMLReference" minOccurs="1" maxOccurs="1">
+                  <xsd:annotation>
+                     <xsd:documentation>The Mapping that defines the foward operation of the BiDirectionalMap. The forward operation of the target Mapping is used as the foward operation of the BiDirectionalMap. If the forward operation of the target Mapping is undefined, then the forward operation of the BiDirectionalMap is also undefined. The inverse operation of the target Mapping is never used and need not be defined.
+</xsd:documentation>
+                     <xsd:appinfo>
+                        <vodml-ref>trans:BiDirectionalMap.forwardMap</vodml-ref>
+                     </xsd:appinfo>
+                  </xsd:annotation>
+               </xsd:element>
+            </xsd:sequence>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <xsd:simpleType name="InterpolationMethod">
+      <xsd:annotation>
+         <xsd:documentation>Enumeration of interpolation methods to control the interpretation of data between known points in operations such as Lookup.</xsd:documentation>
+         <xsd:appinfo>
+            <vodml-ref>trans:InterpolationMethod</vodml-ref>
+         </xsd:appinfo>
+      </xsd:annotation>
+      <xsd:restriction base="xsd:string">
+         <xsd:enumeration value="None">
+            <xsd:annotation>
+               <xsd:documentation>No interpolation method specified, interpretation between points is undefined.</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:InterpolationMethod.None</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="Nearest">
+            <xsd:annotation>
+               <xsd:documentation>Nearest neighbor is selected</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:InterpolationMethod.Nearest</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="Linear">
+            <xsd:annotation>
+               <xsd:documentation>Assume a linear progression between points.</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:InterpolationMethod.Linear</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="Spline">
+            <xsd:annotation>
+               <xsd:documentation>Perform a spline interpolation through the points.  2-dimensional only.</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:InterpolationMethod.Spline</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+      </xsd:restriction>
+   </xsd:simpleType>
+
+   <xsd:simpleType name="SkyProjectionType">
+      <xsd:annotation>
+         <xsd:documentation>Enumeration of non-linear celestial projection algorithm codes as listed in Table 13 of the FITS WCS paper II.</xsd:documentation>
+         <xsd:appinfo>
+            <vodml-ref>trans:SkyProjectionType</vodml-ref>
+         </xsd:appinfo>
+      </xsd:annotation>
+      <xsd:restriction base="xsd:string">
+         <xsd:enumeration value="AZP">
+            <xsd:annotation>
+               <xsd:documentation>Zenithal perspective</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:SkyProjectionType.AZP</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="SZP">
+            <xsd:annotation>
+               <xsd:documentation>Slant zenithal perspective</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:SkyProjectionType.SZP</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="TAN">
+            <xsd:annotation>
+               <xsd:documentation>Gnomonic (Tangent plane projection)</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:SkyProjectionType.TAN</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="STG">
+            <xsd:annotation>
+               <xsd:documentation>Stereographic</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:SkyProjectionType.STG</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="SIN">
+            <xsd:annotation>
+               <xsd:documentation>Slant orthographic (Sine projection)</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:SkyProjectionType.SIN</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="ARC">
+            <xsd:annotation>
+               <xsd:documentation>Zenithal equidistant</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:SkyProjectionType.ARC</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="ZPN">
+            <xsd:annotation>
+               <xsd:documentation>Zenithal polynomial</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:SkyProjectionType.ZPN</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="ZEA">
+            <xsd:annotation>
+               <xsd:documentation>Zenithal equal-area</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:SkyProjectionType.ZEA</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="AIR">
+            <xsd:annotation>
+               <xsd:documentation>Airy</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:SkyProjectionType.AIR</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="CYP">
+            <xsd:annotation>
+               <xsd:documentation>Cylindrical perspective</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:SkyProjectionType.CYP</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="CEA">
+            <xsd:annotation>
+               <xsd:documentation>Cylindrical equal-area</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:SkyProjectionType.CEA</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="CAR">
+            <xsd:annotation>
+               <xsd:documentation>Plate carree</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:SkyProjectionType.CAR</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="MER">
+            <xsd:annotation>
+               <xsd:documentation>Mercator</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:SkyProjectionType.MER</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="SFL">
+            <xsd:annotation>
+               <xsd:documentation>Sanson-Flamsteed</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:SkyProjectionType.SFL</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="PAR">
+            <xsd:annotation>
+               <xsd:documentation>Parabolic</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:SkyProjectionType.PAR</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="MOL">
+            <xsd:annotation>
+               <xsd:documentation>Mollweide</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:SkyProjectionType.MOL</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="AIT">
+            <xsd:annotation>
+               <xsd:documentation>Hammer-Aitoff</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:SkyProjectionType.AIT</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="COP">
+            <xsd:annotation>
+               <xsd:documentation>Conic perspective</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:SkyProjectionType.COP</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="COE">
+            <xsd:annotation>
+               <xsd:documentation>Conic equal-area</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:SkyProjectionType.COE</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="COD">
+            <xsd:annotation>
+               <xsd:documentation>Conic equidistant</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:SkyProjectionType.COD</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="COO">
+            <xsd:annotation>
+               <xsd:documentation>Conic orthomorphic</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:SkyProjectionType.COO</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="BON">
+            <xsd:annotation>
+               <xsd:documentation>Bonne equal-area</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:SkyProjectionType.BON</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="PCO">
+            <xsd:annotation>
+               <xsd:documentation>Polyconic</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:SkyProjectionType.PCO</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="TSC">
+            <xsd:annotation>
+               <xsd:documentation>Tangential spherical cube</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:SkyProjectionType.TSC</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="CSC">
+            <xsd:annotation>
+               <xsd:documentation>COBE Quadrilateralized spherical cube</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:SkyProjectionType.CSC</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="QSC">
+            <xsd:annotation>
+               <xsd:documentation>Quadrilateralized spherical cube</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:SkyProjectionType.QSC</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+      </xsd:restriction>
+   </xsd:simpleType>
+
+   <xsd:simpleType name="SpectralProjectionType">
+      <xsd:annotation>
+         <xsd:documentation>Enumeration of non-linear spectral projection algorithm codes as listed in Table 2 of the FITS WCS paper III.
+NOTE: We exclude the TAB code from this list, that type is handled by the Lookup operation in this model.
+</xsd:documentation>
+         <xsd:appinfo>
+            <vodml-ref>trans:SpectralProjectionType</vodml-ref>
+         </xsd:appinfo>
+      </xsd:annotation>
+      <xsd:restriction base="xsd:string">
+         <xsd:enumeration value="F2W">
+            <xsd:annotation>
+               <xsd:documentation>Frequency - Wavelength</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:SpectralProjectionType.F2W</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="F2V">
+            <xsd:annotation>
+               <xsd:documentation>Frequency - Apparent radial velocity</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:SpectralProjectionType.F2V</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="F2A">
+            <xsd:annotation>
+               <xsd:documentation>Frequency - Air wavelength</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:SpectralProjectionType.F2A</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="W2F">
+            <xsd:annotation>
+               <xsd:documentation>Wavelength - Frequency</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:SpectralProjectionType.W2F</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="W2V">
+            <xsd:annotation>
+               <xsd:documentation>Wavelength - Apparent radial velocity</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:SpectralProjectionType.W2V</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="W2A">
+            <xsd:annotation>
+               <xsd:documentation>Wavelength - Air wavelength</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:SpectralProjectionType.W2A</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="V2F">
+            <xsd:annotation>
+               <xsd:documentation>Apparent radial velocity - Frequency</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:SpectralProjectionType.V2F</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="V2W">
+            <xsd:annotation>
+               <xsd:documentation>Apparent radial velocity - Wavelength</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:SpectralProjectionType.V2W</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="V2A">
+            <xsd:annotation>
+               <xsd:documentation>Apparent radial velocity - Air wavelength</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:SpectralProjectionType.V2A</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="A2F">
+            <xsd:annotation>
+               <xsd:documentation>Air wavelength - Frequency</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:SpectralProjectionType.A2F</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="A2W">
+            <xsd:annotation>
+               <xsd:documentation>Air wavelength - Wavelength</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:SpectralProjectionType.A2W</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="A2V">
+            <xsd:annotation>
+               <xsd:documentation>Air wavelength - Apparent radial velocity</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:SpectralProjectionType.A2V</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="LOG">
+            <xsd:annotation>
+               <xsd:documentation>Logarithm</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:SpectralProjectionType.LOG</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="GRI">
+            <xsd:annotation>
+               <xsd:documentation>Grism</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:SpectralProjectionType.GRI</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="GRA">
+            <xsd:annotation>
+               <xsd:documentation>Grism in air</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:SpectralProjectionType.GRA</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+      </xsd:restriction>
+   </xsd:simpleType>
+
+   <xsd:simpleType name="SpectralCoordType">
+      <xsd:annotation>
+         <xsd:documentation>Enumeration of spectral coordinate types as listed in Table 1 of the FITS WCS paper III.</xsd:documentation>
+         <xsd:appinfo>
+            <vodml-ref>trans:SpectralCoordType</vodml-ref>
+         </xsd:appinfo>
+      </xsd:annotation>
+      <xsd:restriction base="xsd:string">
+         <xsd:enumeration value="FREQ">
+            <xsd:annotation>
+               <xsd:documentation>Frequency</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:SpectralCoordType.FREQ</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="ENER">
+            <xsd:annotation>
+               <xsd:documentation>Energy</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:SpectralCoordType.ENER</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="WAVN">
+            <xsd:annotation>
+               <xsd:documentation>Wavenumber</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:SpectralCoordType.WAVN</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="VRAD">
+            <xsd:annotation>
+               <xsd:documentation>Radio velocity</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:SpectralCoordType.VRAD</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="WAVE">
+            <xsd:annotation>
+               <xsd:documentation>Vacuum wavelength</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:SpectralCoordType.WAVE</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="VOPT">
+            <xsd:annotation>
+               <xsd:documentation>Optical velocity</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:SpectralCoordType.VOPT</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="ZOPT">
+            <xsd:annotation>
+               <xsd:documentation>Redshift</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:SpectralCoordType.ZOPT</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="AWAV">
+            <xsd:annotation>
+               <xsd:documentation>Air wavelength</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:SpectralCoordType.AWAV</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="VELO">
+            <xsd:annotation>
+               <xsd:documentation>Apparent radial velocity</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:SpectralCoordType.VELO</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="BETA">
+            <xsd:annotation>
+               <xsd:documentation>Beta factor (v/c)</xsd:documentation>
+               <xsd:appinfo>
+                  <vodml-ref>trans:SpectralCoordType.BETA</vodml-ref>
+               </xsd:appinfo>
+            </xsd:annotation>
+         </xsd:enumeration>
+      </xsd:restriction>
+   </xsd:simpleType>
+
+</xsd:schema>
