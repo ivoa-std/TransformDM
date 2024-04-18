@@ -14,10 +14,12 @@ defaults:
 env:
   doc_name: Transforms
 
-on:
+on:  # trigger on commit of files in the doc subdirectory
   push:
     branches:
-      - master
+    - master
+    paths:
+    - 'doc/**'
 
 jobs:
   build:
