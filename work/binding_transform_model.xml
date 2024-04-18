@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<m:mappedModels xmlns:m="http://www.ivoa.net/xml/vodml-binding/v0.9.1">
+<!-- ========================================
+ -->
+<model>
+<name>trans</name>
+<file>Trans-v1.0.vo-dml.xml</file>
+    <java-package>org.ivoa.trans.transform</java-package>
+<xml-targetnamespace prefix="trans">http://ivoa.net/dm/models/vo-dml/xsd/trans/</xml-targetnamespace>
+</model>
+</m:mappedModels>

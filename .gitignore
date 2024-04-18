@@ -2,13 +2,27 @@
 # Project specific excludes
 #
 #
-# Binaries
+# ivoatex intermediate files
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.lof
+*.log
+*.out
+*.pdf
+*.toc
+ivoatexmeta.tex
 
 # vo-dml products
 *.cmap
 *.svrlt
 *.gvd
 *.validation-report.txt
+
+# vo-dml toolkit files
+.gradle
 
 # OS
 .DS_Store
